@@ -8,7 +8,7 @@ import io.reactivex.Completable
 import io.reactivex.Single
 import retrofit2.http.*
 
-interface RestApi {
+interface PandaApi {
 
     @POST("/v1/users")
     fun registerDevice(@Body deviceRequest: DeviceRequest): Single<DeviceResponse>
@@ -26,13 +26,6 @@ interface RestApi {
     fun getSubscriptionStatus(
         @Path("user_id") userId: String,
     ): Single<SubscriptionStateResponse>
-
-    @GET("/v1/screen")
-    fun getSubscriptionScreen(
-        @Query("user_id") userId: String,
-        @Query("type") type: String?,
-        @Query("id") id: String?,
-    ): Single<ScreenResponse>
 
     @POST("/v1/android/products/{user_id}")
     fun sendProduct(

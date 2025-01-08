@@ -4,7 +4,8 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import com.appsci.panda.sdk.BuildConfig
 import com.appsci.panda.sdk.data.network.HeaderInterceptor
-import com.appsci.panda.sdk.data.network.RestApi
+import com.appsci.panda.sdk.data.network.PandaApi
+import com.appsci.panda.sdk.data.network.ScreenApi
 import com.appsci.panda.sdk.domain.utils.DeviceManager
 import com.google.gson.GsonBuilder
 import dagger.Module
@@ -76,7 +77,7 @@ class NetworkModule(
 
     @Provides
     @Singleton
-    fun provideApiService(okHttpClient: OkHttpClient): RestApi {
+    fun providePandaApi(okHttpClient: OkHttpClient): PandaApi {
         val gson = GsonBuilder()
                 .setLenient()
                 .create()
@@ -90,6 +91,21 @@ class NetworkModule(
                 .addConverterFactory(GsonConverterFactory.create(gson))
                 .client(okHttpClient)
                 .build()
-                .create(RestApi::class.java)
+                .create(PandaApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideScreenApi(okHttpClient: OkHttpClient): ScreenApi {
+        val gson = GsonBuilder()
+            .setLenient()
+            .create()
+        return Retrofit.Builder()
+            .baseUrl("https://isengard.promova-tech/")
+            .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create(gson))
+            .client(okHttpClient)
+            .build()
+            .create(ScreenApi::class.java)
     }
 }

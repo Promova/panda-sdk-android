@@ -36,7 +36,7 @@ class MainActivity : AppCompatActivity() {
                 Panda.saveCustomUserId(id = "super-unique-custom-id")
                 val subscriptionState = Panda.getSubscriptionState()
                 Timber.d("getSubscriptionState $subscriptionState")
-                Panda.prefetchSubscriptionScreen()
+                Panda.prefetchSubscriptionScreen(id = "id")
             }catch (e: Exception){
                 Timber.e(e)
             }
