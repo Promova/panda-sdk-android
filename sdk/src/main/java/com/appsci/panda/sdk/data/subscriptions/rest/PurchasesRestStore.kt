@@ -57,9 +57,7 @@ class PurchasesRestStoreImpl(
         rxSingle {
             Timber.d("getSubscriptionScreen: $id")
             val screenData = screenApi.getSubscriptionScreen(id)
-            Timber.d("getSubscriptionScreen: $screenData")
             val html = screenApi.getScreenHtml(screenData.htmlUrl)
-            Timber.d("getSubscriptionScreen: html: loaded")
             ScreenData(
                 id = screenData.id,
                 name = screenData.name,
