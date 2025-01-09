@@ -101,7 +101,7 @@ class NetworkModule(
             .setLenient()
             .create()
         return Retrofit.Builder()
-            .baseUrl("https://isengard.promova-tech/")
+            .baseUrl("https://isengard.promova-tech.com/")
             .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
             .addConverterFactory(GsonConverterFactory.create(gson))
             .client(okHttpClient)
