@@ -28,24 +28,20 @@ interface IPanda {
     fun restore(): Single<List<String>>
     fun getSubscriptionState(): Single<SubscriptionState>
     fun prefetchSubscriptionScreen(
-        type: ScreenType? = null,
-        id: String? = null,
+        id: String,
     ): Single<SubscriptionScreen>
 
     fun getSubscriptionScreen(
-        type: ScreenType? = null,
-        id: String? = null,
+        id: String,
         timeoutMs: Long = 5000L,
     ): Single<SubscriptionScreen>
 
     fun getCachedSubscriptionScreen(
-        type: ScreenType? = null,
-        id: String? = null,
+        id: String,
     ): SubscriptionScreen?
 
     fun getCachedOrDefaultSubscriptionScreen(
-        type: ScreenType? = null,
-        id: String? = null,
+        id: String,
     ): Single<SubscriptionScreen>
 
     fun consumeProducts(): Completable
@@ -199,19 +195,17 @@ class PandaImpl(
             .andThen(subscriptionsRepository.getSubscriptionState())
 
     override fun prefetchSubscriptionScreen(
-        type: ScreenType?,
-        id: String?,
+        id: String,
     ): Single<SubscriptionScreen> =
         deviceRepository.ensureAuthorized()
-            .andThen(subscriptionsRepository.prefetchSubscriptionScreen(type, id))
+            .andThen(subscriptionsRepository.prefetchSubscriptionScreen(id))
 
     override fun getSubscriptionScreen(
-        type: ScreenType?,
-        id: String?,
+        id: String,
         timeoutMs: Long,
     ): Single<SubscriptionScreen> =
         deviceRepository.ensureAuthorized()
-            .andThen(subscriptionsRepository.getSubscriptionScreen(type, id))
+            .andThen(subscriptionsRepository.getSubscriptionScreen(id))
             .timeout(timeoutMs, TimeUnit.MILLISECONDS, Schedulers.computation())
             .doOnError {
                 Timber.e(it, "getSubscriptionScreen")
@@ -220,13 +214,12 @@ class PandaImpl(
                 subscriptionsRepository.getFallbackScreen()
             }
 
-    override fun getCachedSubscriptionScreen(type: ScreenType?, id: String?): SubscriptionScreen? =
-        subscriptionsRepository.getCachedScreen(type = type, id = id)
+    override fun getCachedSubscriptionScreen(id: String): SubscriptionScreen? =
+        subscriptionsRepository.getCachedScreen(id = id)
 
     override fun getCachedOrDefaultSubscriptionScreen(
-        type: ScreenType?,
-        id: String?,
-    ): Single<SubscriptionScreen> = subscriptionsRepository.getCachedScreen(type, id)?.let {
+        id: String,
+    ): Single<SubscriptionScreen> = subscriptionsRepository.getCachedScreen(id)?.let {
         Single.just(it)
     } ?: subscriptionsRepository.getFallbackScreen()
 

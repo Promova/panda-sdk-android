@@ -35,7 +35,7 @@ class GetScreenActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_get_screen)
         lifecycleScope.launch {
-            Panda.getSubscriptionScreen()
+            Panda.getSubscriptionScreen(id = "id")
                 .let {
                     val payloadMap = mapOf(
                         "target_language" to "ru",
