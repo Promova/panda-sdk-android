@@ -182,6 +182,7 @@ ext {
             retrofit                 : "com.squareup.retrofit2:retrofit:$retrofitVer",
             retrofitGsonConverter    : "com.squareup.retrofit2:converter-gson:$retrofitVer",
             retrofitRxJavaAdapter    : "com.squareup.retrofit2:adapter-rxjava2:$retrofitVer",
+            retrofitScalarsConverter : "com.squareup.retrofit2:converter-scalars:$retrofitVer",
             retrofitCoroutinesAdapter: "com.jakewharton.retrofit:retrofit2-kotlin-coroutines-adapter:$coroutinesAdapterVer",
             room                     : "androidx.room:room-runtime:$roomVer",
             roomRxJava               : "androidx.room:room-rxjava2:$roomVer",
