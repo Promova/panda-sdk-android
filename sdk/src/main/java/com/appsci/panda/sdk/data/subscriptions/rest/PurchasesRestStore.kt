@@ -7,6 +7,7 @@ import com.appsci.panda.sdk.domain.subscriptions.SkuType
 import com.appsci.panda.sdk.domain.subscriptions.SubscriptionState
 import io.reactivex.Single
 import kotlinx.coroutines.rx2.rxSingle
+import timber.log.Timber
 
 interface PurchasesRestStore {
 
@@ -54,8 +55,11 @@ class PurchasesRestStoreImpl(
         id: String,
     ): Single<ScreenData> =
         rxSingle {
+            Timber.d("getSubscriptionScreen: $id")
             val screenData = screenApi.getSubscriptionScreen(id)
+            Timber.d("getSubscriptionScreen: $screenData")
             val html = screenApi.getScreenHtml(screenData.htmlUrl)
+            Timber.d("getSubscriptionScreen: html: loaded")
             ScreenData(
                 id = screenData.id,
                 name = screenData.name,
