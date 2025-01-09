@@ -23,7 +23,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         _binding = ActivityMainBinding.inflate(LayoutInflater.from(this))
-        setContentView(R.layout.activity_main)
+        setContentView(binding.root)
 
         with(binding) {
             btnGetScreen.setOnClickListener {
@@ -36,7 +36,7 @@ class MainActivity : AppCompatActivity() {
                 Panda.saveCustomUserId(id = "super-unique-custom-id")
                 val subscriptionState = Panda.getSubscriptionState()
                 Timber.d("getSubscriptionState $subscriptionState")
-                Panda.prefetchSubscriptionScreen()
+                Panda.prefetchSubscriptionScreen(id = "id")
             }catch (e: Exception){
                 Timber.e(e)
             }

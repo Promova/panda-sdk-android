@@ -166,9 +166,9 @@ object Panda {
      */
     @SuppressLint("SetJavaScriptEnabled")
     @JvmStatic
-    suspend fun prefetchSubscriptionScreen(type: ScreenType? = null, id: String? = null) =
+    suspend fun prefetchSubscriptionScreen(id: String) =
         withContext(Dispatchers.IO) {
-            panda.prefetchSubscriptionScreen(type, id)
+            panda.prefetchSubscriptionScreen(id)
                 .subscribeOn(Schedulers.io())
                 .ignoreElement()
                 .await()
@@ -176,25 +176,22 @@ object Panda {
 
     @JvmStatic
     fun getCachedSubscriptionScreen(
-        type: ScreenType? = null,
-        id: String? = null,
-    ) = panda.getCachedSubscriptionScreen(type = type, id = id)
+        id: String,
+    ) = panda.getCachedSubscriptionScreen(id = id)
 
     @JvmStatic
     suspend fun getSubscriptionScreen(
-        type: ScreenType? = null,
-        id: String? = null,
+        id: String,
     ): SubscriptionScreen = withContext(Dispatchers.IO) {
-        panda.getSubscriptionScreen(type, id)
+        panda.getSubscriptionScreen(id)
             .subscribeOn(Schedulers.io())
             .await()
     }
 
     @JvmStatic
     suspend fun getCachedOrDefaultSubscriptionScreen(
-        type: ScreenType? = null,
-        id: String? = null,
-    ): SubscriptionScreen = panda.getCachedOrDefaultSubscriptionScreen(type, id).await()
+        id: String,
+    ): SubscriptionScreen = panda.getCachedOrDefaultSubscriptionScreen(id).await()
 
     @JvmStatic
     suspend fun getProductsDetails(requests: Map<String, List<String>>): List<ProductDetails> =

@@ -3,7 +3,7 @@ package com.appsci.panda.sdk.data.device
 import com.appsci.panda.sdk.data.db.PandaDatabase
 import com.appsci.panda.sdk.data.device.utils.AuthDataValidator
 import com.appsci.panda.sdk.data.device.utils.AuthorizationDataBuilder
-import com.appsci.panda.sdk.data.network.RestApi
+import com.appsci.panda.sdk.data.network.PandaApi
 import com.appsci.panda.sdk.domain.device.AuthState
 import com.appsci.panda.sdk.domain.device.Device
 import com.appsci.panda.sdk.domain.device.DeviceRepository
@@ -18,7 +18,7 @@ import javax.inject.Inject
 
 class DeviceRepositoryImpl @Inject constructor(
     private val database: PandaDatabase,
-    private val restApi: RestApi,
+    private val pandaApi: PandaApi,
     private val authorizationDataBuilder: AuthorizationDataBuilder,
     private val authDataValidator: AuthDataValidator,
     private val deviceMapper: DeviceMapper,
@@ -59,7 +59,7 @@ class DeviceRepositoryImpl @Inject constructor(
     }
 
     override fun deleteDevice(): Completable {
-        return restApi.deleteDevice()
+        return pandaApi.deleteDevice()
             .andThen(clearLocalData())
     }
 
@@ -97,7 +97,7 @@ class DeviceRepositoryImpl @Inject constructor(
             val authData = authorizationDataBuilder.createAuthData()
             Timber.d("registerDevice $authData")
             val registerRequest = deviceMapper.mapRegisterRequest(authData)
-            return@defer restApi.registerDevice(registerRequest)
+            return@defer pandaApi.registerDevice(registerRequest)
                 .map { deviceMapper.mapToLocal(it, registerRequest) }
                 .doOnSuccess {
                     preferences.pandaUserId = it.id
@@ -117,7 +117,7 @@ class DeviceRepositoryImpl @Inject constructor(
                 return@defer Single.just(deviceMapper.mapToDomain(deviceEntity))
             } else {
                 val updateRequest = deviceMapper.mapUpdateRequest(authData)
-                return@defer restApi.updateDevice(updateRequest, deviceEntity.id)
+                return@defer pandaApi.updateDevice(updateRequest, deviceEntity.id)
                     .map { deviceMapper.mapToLocal(it, updateRequest) }
                     .doOnSuccess {
                         preferences.pandaUserId = it.id
@@ -135,7 +135,7 @@ class DeviceRepositoryImpl @Inject constructor(
                     val authData = authorizationDataBuilder.createAuthData()
                         .copy(idfa = "")
                     val updateRequest = deviceMapper.mapUpdateRequest(authData)
-                    return@flatMapSingleElement restApi.updateDevice(updateRequest, deviceEntity.id)
+                    return@flatMapSingleElement pandaApi.updateDevice(updateRequest, deviceEntity.id)
                         .map { deviceMapper.mapToLocal(it, updateRequest) }
                         .doOnSuccess {
                             deviceDao.putDevice(it)

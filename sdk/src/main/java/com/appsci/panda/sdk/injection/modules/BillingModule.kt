@@ -3,7 +3,8 @@ package com.appsci.panda.sdk.injection.modules
 import android.content.Context
 import com.appsci.panda.sdk.data.db.PandaDatabase
 import com.appsci.panda.sdk.data.device.DeviceDao
-import com.appsci.panda.sdk.data.network.RestApi
+import com.appsci.panda.sdk.data.network.PandaApi
+import com.appsci.panda.sdk.data.network.ScreenApi
 import com.appsci.panda.sdk.data.subscriptions.PurchasesMapper
 import com.appsci.panda.sdk.data.subscriptions.PurchasesMapperImpl
 import com.appsci.panda.sdk.data.subscriptions.SubscriptionsRepositoryImpl
@@ -33,20 +34,20 @@ class BillingModule(private val context: Context) {
     @Provides
     @Singleton
     fun provideSubscriptionsRepository(
-            localStore: PurchasesLocalStore,
-            googleStore: PurchasesGoogleStore,
-            restStore: PurchasesRestStore,
-            mapper: PurchasesMapper,
-            deviceDao: DeviceDao,
+        localStore: PurchasesLocalStore,
+        googleStore: PurchasesGoogleStore,
+        restStore: PurchasesRestStore,
+        mapper: PurchasesMapper,
+        deviceDao: DeviceDao,
     ): SubscriptionsRepository {
         return SubscriptionsRepositoryImpl(
-                localStore,
-                googleStore,
-                restStore,
-                mapper,
-                BillingValidatorImpl(),
-                deviceDao,
-                FileStoreImpl(context),
+            localStore,
+            googleStore,
+            restStore,
+            mapper,
+            BillingValidatorImpl(),
+            deviceDao,
+            FileStoreImpl(context),
         )
     }
 
@@ -58,15 +59,18 @@ class BillingModule(private val context: Context) {
 
     @Provides
     @Singleton
-    fun providePurchasesRestStore(restApi: RestApi): PurchasesRestStore {
-        return PurchasesRestStoreImpl(restApi)
+    fun providePurchasesRestStore(
+        pandaApi: PandaApi,
+        screenApi: ScreenApi,
+    ): PurchasesRestStore {
+        return PurchasesRestStoreImpl(pandaApi, screenApi)
     }
 
     @Provides
     @Singleton
     fun providePurchasesGoogleStore(
-            rxBilling: RxBilling,
-            mapper: PurchasesMapper,
+        rxBilling: RxBilling,
+        mapper: PurchasesMapper,
     ): PurchasesGoogleStore {
         return PurchasesGoogleStoreImpl(rxBilling, mapper)
     }
