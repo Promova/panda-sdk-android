@@ -8,7 +8,10 @@ import com.appsci.panda.sdk.data.subscriptions.local.FileStore
 import com.appsci.panda.sdk.data.subscriptions.local.PurchasesLocalStore
 import com.appsci.panda.sdk.data.subscriptions.rest.PurchasesRestStore
 import com.appsci.panda.sdk.data.subscriptions.rest.ScreenData
-import com.appsci.panda.sdk.domain.subscriptions.*
+import com.appsci.panda.sdk.domain.subscriptions.Purchase
+import com.appsci.panda.sdk.domain.subscriptions.SubscriptionScreen
+import com.appsci.panda.sdk.domain.subscriptions.SubscriptionState
+import com.appsci.panda.sdk.domain.subscriptions.SubscriptionsRepository
 import com.appsci.panda.sdk.domain.utils.rx.DefaultCompletableObserver
 import io.reactivex.Completable
 import io.reactivex.Flowable
@@ -112,7 +115,7 @@ class SubscriptionsRepositoryImpl(
 
     }
 
-    override fun getCachedScreen( id: String): SubscriptionScreen? {
+    override fun getCachedScreen(id: String): SubscriptionScreen? {
         return loadedScreens[id]?.let {
             SubscriptionScreen(
                 id = it.id,
@@ -180,13 +183,10 @@ class SubscriptionsRepositoryImpl(
 
     private fun loadSubscriptionScreen(id: String): Single<ScreenData> {
         Timber.d("loadSubscriptionScreen $id")
-        return deviceDao.requireUserId()
-            .flatMap {
-                restStore.getSubscriptionScreen(
-                    id = id,
-                )
-            }.doOnSuccess {
-                loadedScreens[id] = it
-            }
+        return restStore.getSubscriptionScreen(
+            id = id,
+        ).doOnSuccess {
+            loadedScreens[id] = it
+        }
     }
 }

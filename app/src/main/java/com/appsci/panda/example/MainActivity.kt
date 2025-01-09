@@ -23,7 +23,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         _binding = ActivityMainBinding.inflate(LayoutInflater.from(this))
-        setContentView(R.layout.activity_main)
+        setContentView(binding.root)
 
         with(binding) {
             btnGetScreen.setOnClickListener {
