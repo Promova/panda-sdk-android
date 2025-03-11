@@ -4,11 +4,15 @@ import com.android.billingclient.api.ProductDetails
 import com.appsci.panda.sdk.data.StopNetwork
 import com.appsci.panda.sdk.domain.device.DeviceRepository
 import com.appsci.panda.sdk.domain.feedback.FeedbackRepository
-import com.appsci.panda.sdk.domain.subscriptions.*
+import com.appsci.panda.sdk.domain.subscriptions.Purchase
+import com.appsci.panda.sdk.domain.subscriptions.SubscriptionScreen
+import com.appsci.panda.sdk.domain.subscriptions.SubscriptionState
+import com.appsci.panda.sdk.domain.subscriptions.SubscriptionsRepository
 import com.appsci.panda.sdk.domain.utils.DeviceManager
 import com.appsci.panda.sdk.domain.utils.LocalPropertiesDataSource
 import com.appsci.panda.sdk.domain.utils.Preferences
 import com.appsci.panda.sdk.domain.utils.rx.Schedulers
+import dagger.Lazy
 import io.reactivex.Completable
 import io.reactivex.Single
 import kotlinx.coroutines.Dispatchers
@@ -63,14 +67,35 @@ interface IPanda {
 }
 
 class PandaImpl(
-    private val preferences: Preferences,
-    private val deviceManager: DeviceManager,
-    private val deviceRepository: DeviceRepository,
-    private val subscriptionsRepository: SubscriptionsRepository,
-    private val stopNetworkInternal: StopNetwork,
-    private val propertiesDataSource: LocalPropertiesDataSource,
-    private val feedbackRepository: FeedbackRepository,
+    private val preferencesLazy: Lazy<Preferences>,
+    private val deviceManagerLazy: Lazy<DeviceManager>,
+    private val deviceRepositoryLazy: Lazy<DeviceRepository>,
+    private val subscriptionsRepositoryLazy: Lazy<SubscriptionsRepository>,
+    private val stopNetworkInternalLazy: Lazy<StopNetwork>,
+    private val propertiesDataSourceLazy: Lazy<LocalPropertiesDataSource>,
+    private val feedbackRepositoryLazy: Lazy<FeedbackRepository>,
 ) : IPanda {
+
+    private val preferences: Preferences
+        get() = preferencesLazy.get()
+
+    private val deviceManager: DeviceManager
+        get() = deviceManagerLazy.get()
+
+    private val deviceRepository: DeviceRepository
+        get() = deviceRepositoryLazy.get()
+
+    private val subscriptionsRepository: SubscriptionsRepository
+        get() = subscriptionsRepositoryLazy.get()
+
+    private val stopNetworkInternal: StopNetwork
+        get() = stopNetworkInternalLazy.get()
+
+    private val propertiesDataSource: LocalPropertiesDataSource
+        get() = propertiesDataSourceLazy.get()
+
+    private val feedbackRepository: FeedbackRepository
+        get() = feedbackRepositoryLazy.get()
 
     override val pandaUserId: String?
         get() = deviceRepository.pandaUserId
