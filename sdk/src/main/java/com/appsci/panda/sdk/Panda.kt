@@ -474,8 +474,6 @@ object Panda {
 
 class PandaDependencies {
     @Inject
-    lateinit var pandaLazy: Lazy<IPanda>
-    val panda: IPanda
-        get() = pandaLazy.get()
+    lateinit var panda: IPanda
 }
 
