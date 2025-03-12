@@ -14,6 +14,7 @@ import com.appsci.panda.sdk.injection.modules.BillingModule
 import com.appsci.panda.sdk.injection.modules.NetworkModule
 import com.appsci.panda.sdk.ui.ScreenExtra
 import com.jakewharton.threetenabp.AndroidThreeTen
+import dagger.Lazy
 import io.reactivex.Single
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.rx2.await

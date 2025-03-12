@@ -5,15 +5,16 @@ import android.content.res.Resources
 import com.appsci.panda.sdk.IPanda
 import com.appsci.panda.sdk.PandaImpl
 import com.appsci.panda.sdk.data.DeviceManagerImpl
-import com.appsci.panda.sdk.data.PreferencesImpl
 import com.appsci.panda.sdk.data.LocalPropertiesDataSourceImpl
+import com.appsci.panda.sdk.data.PreferencesImpl
 import com.appsci.panda.sdk.data.StopNetwork
 import com.appsci.panda.sdk.domain.device.DeviceRepository
 import com.appsci.panda.sdk.domain.feedback.FeedbackRepository
 import com.appsci.panda.sdk.domain.subscriptions.SubscriptionsRepository
 import com.appsci.panda.sdk.domain.utils.DeviceManager
-import com.appsci.panda.sdk.domain.utils.Preferences
 import com.appsci.panda.sdk.domain.utils.LocalPropertiesDataSource
+import com.appsci.panda.sdk.domain.utils.Preferences
+import dagger.Lazy
 import dagger.Module
 import dagger.Provides
 import org.threeten.bp.Clock
@@ -24,22 +25,24 @@ class AppModule(private val context: Context) {
 
     @Provides
     fun providePanda(
-            deviceRepository: DeviceRepository,
-            subscriptionsRepository: SubscriptionsRepository,
-            preferences: Preferences,
-            deviceManager: DeviceManager,
-            stopNetwork: StopNetwork,
-            localPropertiesDataSource: LocalPropertiesDataSource,
-            feedbackRepository: FeedbackRepository,
-    ): IPanda = PandaImpl(
-            deviceRepository = deviceRepository,
-            subscriptionsRepository = subscriptionsRepository,
-            preferences = preferences,
-            deviceManager = deviceManager,
-            stopNetworkInternal = stopNetwork,
-            propertiesDataSource = localPropertiesDataSource,
-            feedbackRepository = feedbackRepository,
-    )
+        deviceRepository: Lazy<DeviceRepository>,
+        subscriptionsRepository: Lazy<SubscriptionsRepository>,
+        preferences: Lazy<Preferences>,
+        deviceManager: Lazy<DeviceManager>,
+        stopNetwork: Lazy<StopNetwork>,
+        localPropertiesDataSource: Lazy<LocalPropertiesDataSource>,
+        feedbackRepository: Lazy<FeedbackRepository>,
+    ): IPanda {
+        return PandaImpl(
+            preferencesLazy = preferences,
+            deviceManagerLazy = deviceManager,
+            deviceRepositoryLazy = deviceRepository,
+            subscriptionsRepositoryLazy = subscriptionsRepository,
+            stopNetworkInternalLazy = stopNetwork,
+            propertiesDataSourceLazy = localPropertiesDataSource,
+            feedbackRepositoryLazy = feedbackRepository,
+        )
+    }
 
     @Provides
     fun provideAppContext(): Context = context
@@ -49,8 +52,8 @@ class AppModule(private val context: Context) {
 
     @Provides
     fun provideDeviceManager(
-            appContext: Context,
-            preferences: Preferences,
+        appContext: Context,
+        preferences: Preferences,
     ): DeviceManager {
         return DeviceManagerImpl(appContext, preferences)
     }
@@ -65,13 +68,13 @@ class AppModule(private val context: Context) {
     @Singleton
     fun providePropertiesDataSource(context: Context): LocalPropertiesDataSource {
         return LocalPropertiesDataSourceImpl(
-                context.getSharedPreferences("PropertiesPreferences", Context.MODE_PRIVATE)
+            context.getSharedPreferences("PropertiesPreferences", Context.MODE_PRIVATE)
         )
     }
 
     @Provides
     @Singleton
     fun provideClock(): Clock =
-            Clock.systemDefaultZone()
+        Clock.systemDefaultZone()
 
 }
