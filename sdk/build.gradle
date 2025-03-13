@@ -54,15 +54,33 @@ android {
     namespace 'com.appsci.panda.sdk'
 }
 
+def localProperties = new Properties()
+def localPropsFile = rootProject.file("local.properties")
+if (localPropsFile.exists()) {
+    localProperties.load(new FileInputStream(localPropsFile))
+}
+
 afterEvaluate {
     publishing {
         publications {
-            // Creates a Maven publication called "release".
             release(MavenPublication) {
                 from components.release
                 groupId = 'com.github.AppSci'
                 artifactId = 'panda-sdk-android'
                 version = '1.7.1'
+            }
+        }
+
+        repositories {
+            maven {
+                name = "GitHubPackages"
+                url = uri("https://maven.pkg.github.com/AppSci/panda-sdk-android")
+                credentials {
+                    def username = localProperties['github.actor']?: System.getenv("GPR_USER")
+                    def password = localProperties['github.token']?: System.getenv("GPR_API_KEY")
+                    setUsername(username)
+                    setPassword(password)
+                }
             }
         }
     }
