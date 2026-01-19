@@ -47,6 +47,11 @@ android {
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
+    testOptions {
+        unitTests.all {
+            useJUnitPlatform()
+        }
+    }
     buildFeatures {
         viewBinding true
         buildConfig true
@@ -124,6 +129,9 @@ dependencies {
     testImplementation testDependencies.jupiterApi
     testImplementation testDependencies.jupiterEngine
     testImplementation testDependencies.jupiterParams
+    testImplementation testDependencies.mockK
+    testImplementation testDependencies.assertJ
+    testImplementation coroutineDependencies.test
 
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
