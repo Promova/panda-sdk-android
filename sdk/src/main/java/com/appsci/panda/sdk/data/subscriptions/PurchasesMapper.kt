@@ -30,10 +30,13 @@ class PurchasesMapperImpl : PurchasesMapper {
             purchases: List<com.android.billingclient.api.Purchase>,
             type: Int
     ): List<PurchaseEntity> {
-        return purchases.map {
+        return purchases.mapNotNull {
+            val productId = it.products.firstOrNull() ?: return@mapNotNull null
+            val orderId = it.orderId ?: return@mapNotNull null
+
             PurchaseEntity(
-                    productId = it.skus.first(),
-                    orderId = it.orderId,
+                    productId = productId,
+                    orderId = orderId,
                     purchaseToken = it.purchaseToken,
                     purchaseType = type,
                     synced = false

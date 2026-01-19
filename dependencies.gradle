@@ -1,7 +1,7 @@
 ext {
-    compileSdkVer = 29
-    minSdkVer = 23
-    targetSdkVer = 29
+    compileSdkVer = 35
+    minSdkVer = 24
+    targetSdkVer = 35
 
     versionName = '1.2.0'
     testersMails = '.ci/internal/beta_distribution_emails.txt'
@@ -81,8 +81,8 @@ ext {
     sleepTimePickerVer = "1.0.3"
 
     // Billing Client
-    billingClientVer = '5.0.0'
-    rxbillingVer = '4aea881859'
+    billingClientVer = '8.0.0'
+    billingKtxVer = '1.0.0'
 
     // Developer-related
     timberVer = '5.0.1'
@@ -187,8 +187,8 @@ ext {
             room                     : "androidx.room:room-runtime:$roomVer",
             roomRxJava               : "androidx.room:room-rxjava2:$roomVer",
             roomCompiler             : "androidx.room:room-compiler:$roomVer",
-            billingClient            : "com.android.billingclient:billing:$billingClientVer",
-            rxBilling                : "com.github.betterme-dev:rxbilling:$rxbillingVer",
+            billingKtx               : "com.github.AppSci:billing-ktx:$billingKtxVer",
+            billingClient            : "com.android.billingclient:billing-ktx:$billingClientVer",
             threeten                 : "com.jakewharton.threetenabp:threetenabp:$threetenVer"
     ]
 

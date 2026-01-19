@@ -21,8 +21,7 @@ import org.junit.jupiter.api.Test
  * - Google Billing Library Purchase -> PurchaseEntity (local DB)
  * - PurchaseEntity -> Domain Purchase
  *
- * IMPORTANT: When migrating to Billing v8, `purchase.skus` will be replaced
- * with `purchase.products`. These tests should catch any regressions.
+ * Now using Billing v8 with `purchase.products` instead of deprecated `purchase.skus`.
  */
 @DisplayName("PurchasesMapper")
 class PurchasesMapperTest {
@@ -173,6 +172,48 @@ class PurchasesMapperTest {
             assertThat(result).hasSize(1)
             assertThat(result.first().orderId).isEmpty()
         }
+
+        @Test
+        @DisplayName("should handle null orderId (Billing v8)")
+        fun mapPurchaseWithNullOrderId() {
+            // Given - orderId can be null in Billing v8
+            val billingPurchase = createMockBillingPurchase(
+                productIds = listOf("product"),
+                orderId = null,
+                purchaseToken = "token"
+            )
+
+            // When
+            val result = mapper.mapFromBillingPurchases(
+                purchases = listOf(billingPurchase),
+                type = TYPE_SUBSCRIPTION
+            )
+
+            // Then
+            assertThat(result).hasSize(1)
+            assertThat(result.first().orderId).isEmpty()
+        }
+
+        @Test
+        @DisplayName("should handle empty products list")
+        fun mapPurchaseWithEmptyProductsList() {
+            // Given - edge case for empty products list
+            val billingPurchase = createMockBillingPurchase(
+                productIds = emptyList(),
+                orderId = "order",
+                purchaseToken = "token"
+            )
+
+            // When
+            val result = mapper.mapFromBillingPurchases(
+                purchases = listOf(billingPurchase),
+                type = TYPE_SUBSCRIPTION
+            )
+
+            // Then
+            assertThat(result).hasSize(1)
+            assertThat(result.first().productId).isEmpty()
+        }
     }
 
     @Nested
@@ -245,21 +286,16 @@ class PurchasesMapperTest {
     /**
      * Helper function to create a mock Billing Purchase.
      *
-     * NOTE: In Billing v5, this uses `purchase.skus` property.
-     * In Billing v8, this will change to `purchase.products`.
-     *
-     * The mock simulates both behaviors for forward compatibility testing.
+     * Using Billing v8 API with `purchase.products` property.
+     * Note: orderId can be null in v8.
      */
     private fun createMockBillingPurchase(
         productIds: List<String>,
-        orderId: String,
+        orderId: String?,
         purchaseToken: String,
         isAcknowledged: Boolean = false
     ): Purchase {
         val mock = mockk<Purchase>(relaxed = true)
-        // v5 API - will be deprecated in v6+
-        every { mock.skus } returns ArrayList(productIds)
-        // v5+ API - this is the future
         every { mock.products } returns ArrayList(productIds)
         every { mock.orderId } returns orderId
         every { mock.purchaseToken } returns purchaseToken

@@ -364,17 +364,20 @@ object Panda {
     internal fun onPurchase(
         screenExtra: ScreenExtra,
         purchase: GooglePurchase,
-        @BillingClient.SkuType type: String,
+        type: String,
     ): Single<Boolean> {
         val purchaseType = when (type) {
-            BillingClient.SkuType.SUBS -> SkuType.SUBSCRIPTION
+            BillingClient.ProductType.SUBS -> SkuType.SUBSCRIPTION
             else -> SkuType.INAPP
         }
+        val productId = purchase.products.firstOrNull() ?: error("ProductId is not found")
+        val orderId = purchase.orderId ?: error("ProductId is not found")
+
         return panda.validatePurchase(
             Purchase(
-                id = purchase.skus.first(),
+                id = productId,
                 type = purchaseType,
-                orderId = purchase.orderId,
+                orderId = orderId,
                 token = purchase.purchaseToken
             )
         )
@@ -383,7 +386,7 @@ object Panda {
             .doOnError { t ->
                 notifyError(t)
             }.doOnSuccess {
-                notifyPurchase(screenExtra, purchase.skus.first())
+                notifyPurchase(screenExtra, productId)
             }
     }
 

@@ -5,7 +5,7 @@ apply plugin: 'kotlin-kapt'
 apply plugin: 'maven-publish'
 
 android {
-    compileSdk 34
+    compileSdk 35
 
     resourcePrefix 'panda_'
 
@@ -14,8 +14,8 @@ android {
     }
 
     defaultConfig {
-        minSdk 21
-        targetSdk 34
+        minSdk 24
+        targetSdk 35
 
         buildConfigField "String", "PANDA_ENDPOINT_PROD", "\"https://api.panda.boosters.company/\""
         buildConfigField "String", "PANDA_ENDPOINT_STAGE", "\"https://api.panda-stage.boosters.company/\""
@@ -116,8 +116,8 @@ dependencies {
     implementation 'com.google.firebase:firebase-analytics-ktx'
 
     // Billing
+    implementation dataDependencies.billingKtx
     implementation dataDependencies.billingClient
-    implementation dataDependencies.rxBilling
 
     implementation developmentDependencies.timber
 

@@ -4,7 +4,7 @@ apply from: 'dependencies.gradle'
 apply plugin: 'com.github.ben-manes.versions'
 
 buildscript {
-    ext.kotlin_version = "1.9.22"
+    ext.kotlin_version = "2.0.21"
     repositories {
         google()
         mavenCentral()
@@ -22,11 +22,25 @@ buildscript {
     }
 }
 
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localProperties.load(new FileInputStream(localPropertiesFile))
+}
+
 allprojects {
     repositories {
         google()
         mavenCentral()
         maven { url 'https://jitpack.io' }
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/Promova/billing-ktx")
+            credentials {
+                username = localProperties.getProperty("github.actor") ?: System.getenv("GPR_USER")
+                password = localProperties.getProperty("github.token") ?: System.getenv("GPR_API_KEY")
+            }
+        }
     }
 }
 
