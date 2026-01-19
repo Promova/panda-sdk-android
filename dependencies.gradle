@@ -199,12 +199,15 @@ ext {
             "test"   : "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutineVer"
     ]
 
+    mockKVer = '1.13.8'
+
     testDependencies = [
             jUnit             : "junit:junit:$jUnitVer",
             mockito           : "org.mockito:mockito-core:$mockitoVer",
             mockitoKotlin     : "com.nhaarman.mockitokotlin2:mockito-kotlin:$mockitoKotlinVer",
             mockitoInline     : "org.mockito:mockito-inline:$mockitoVer",
             mockitoAndroid    : "org.mockito:mockito-android:$mockitoAndroidVer",
+            mockK             : "io.mockk:mockk:$mockKVer",
             assertJ           : "org.assertj:assertj-core:$assertJVer",
             dataProvider      : "com.tngtech.junit.dataprovider:junit4-dataprovider:$dataProviderVer",
             archComponentsTest: "androidx.arch.core:core-testing:$archComponentsTestVer",
