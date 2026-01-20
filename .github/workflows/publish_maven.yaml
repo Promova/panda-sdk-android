@@ -18,7 +18,6 @@ jobs:
     runs-on: android-hetzner-dedicated
 
     steps:
-
       - name: Check out repository
         uses: actions/checkout@v3
         with:
@@ -30,11 +29,8 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Build Android project
-        id: build_android_project
-        run: |
-          export ANDROID_HOME=$HOME/Android/Sdk
-          export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/tools:$ANDROID_HOME/tools/bin:$ANDROID_HOME/platform-tools:$PATH"
-          ./gradlew publishReleasePublicationToGitHubPackagesRepository
-    
-      
+        run: ./gradlew publishReleasePublicationToGitHubPackagesRepository
