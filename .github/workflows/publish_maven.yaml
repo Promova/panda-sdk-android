@@ -1,0 +1,34 @@
+name: Publish to Maven
+
+on:
+  workflow_dispatch:
+    branches:
+      - develop
+      - master
+      - 'feature/*'
+
+env:
+  EC2_GENERATE_CONTENT_ID: ${{ secrets.EC2_GENERATE_CONTENT_ID }}
+  GPR_USER: ${{ secrets.GPR_USER }}
+  GPR_API_KEY: ${{ secrets.GPR_API_KEY }}
+
+jobs:
+
+  build:
+    runs-on: android-office
+
+    steps:
+
+      - name: Check out repository
+        uses: actions/checkout@v3
+        with:
+          clean: true
+
+      - name: Build Android project
+        id: build_android_project
+        run: |
+          export ANDROID_HOME=$HOME/Android/Sdk
+          export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/tools:$ANDROID_HOME/tools/bin:$ANDROID_HOME/platform-tools:$PATH"
+          run: ./gradlew publishReleasePublicationToGitHubPackagesRepository
+    
+      
