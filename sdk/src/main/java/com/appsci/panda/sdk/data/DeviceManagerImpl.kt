@@ -26,7 +26,7 @@ class DeviceManagerImpl constructor(
             ).toString()
 
     override fun getAppVersionName(): String =
-            context.packageManager.getPackageInfo(context.packageName, 0).versionName
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty()
 
     override fun getAppVersionCode(): Int =
             context.packageManager.getPackageInfo(context.packageName, 0).versionCode

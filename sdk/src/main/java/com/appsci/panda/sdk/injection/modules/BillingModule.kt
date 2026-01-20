@@ -17,9 +17,9 @@ import com.appsci.panda.sdk.data.subscriptions.local.PurchasesLocalStoreImpl
 import com.appsci.panda.sdk.data.subscriptions.rest.PurchasesRestStore
 import com.appsci.panda.sdk.data.subscriptions.rest.PurchasesRestStoreImpl
 import com.appsci.panda.sdk.domain.subscriptions.SubscriptionsRepository
-import com.gen.rxbilling.client.RxBilling
-import com.gen.rxbilling.client.RxBillingImpl
-import com.gen.rxbilling.connection.BillingClientFactory
+import com.appsci.billingktx.client.BillingKtx
+import com.appsci.billingktx.client.BillingKtxImpl
+import com.appsci.billingktx.connection.BillingKtxFactory
 import dagger.Module
 import dagger.Provides
 import javax.inject.Singleton
@@ -29,7 +29,13 @@ class BillingModule(private val context: Context) {
 
     @Provides
     @Singleton
-    fun provideRxBilling(): RxBilling = RxBillingImpl(BillingClientFactory(context))
+    fun provideBillingKtx(): BillingKtx = BillingKtxImpl(
+        BillingKtxFactory(
+            context = context,
+            enableOneTimeProducts = true,
+            enablePrepaidPlans = true,
+        )
+    )
 
     @Provides
     @Singleton
@@ -69,10 +75,10 @@ class BillingModule(private val context: Context) {
     @Provides
     @Singleton
     fun providePurchasesGoogleStore(
-        rxBilling: RxBilling,
+        billingKtx: BillingKtx,
         mapper: PurchasesMapper,
     ): PurchasesGoogleStore {
-        return PurchasesGoogleStoreImpl(rxBilling, mapper)
+        return PurchasesGoogleStoreImpl(billingKtx, mapper)
     }
 
     @Provides

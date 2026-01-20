@@ -1,17 +1,16 @@
 package com.appsci.panda.sdk.data.subscriptions.google
 
 import com.android.billingclient.api.*
+import com.appsci.billingktx.client.BillingKtx
 import com.appsci.panda.sdk.data.subscriptions.PurchasesMapper
 import com.appsci.panda.sdk.data.subscriptions.local.PurchaseEntity
 import com.appsci.panda.sdk.data.subscriptions.local.TYPE_PRODUCT
 import com.appsci.panda.sdk.data.subscriptions.local.TYPE_SUBSCRIPTION
-import com.appsci.panda.sdk.domain.utils.rx.Schedulers
-import com.gen.rxbilling.client.RxBilling
 import io.reactivex.Completable
-import io.reactivex.Flowable
 import io.reactivex.Single
 import kotlinx.coroutines.*
-import kotlinx.coroutines.rx2.await
+import kotlinx.coroutines.rx2.rxCompletable
+import kotlinx.coroutines.rx2.rxSingle
 import timber.log.Timber
 
 interface PurchasesGoogleStore {
@@ -29,84 +28,72 @@ interface PurchasesGoogleStore {
 }
 
 class PurchasesGoogleStoreImpl(
-        private val rxBilling: RxBilling,
+        private val billingKtx: BillingKtx,
         private val mapper: PurchasesMapper,
 ) : PurchasesGoogleStore {
 
-    override fun getPurchases(): Single<List<PurchaseEntity>> {
-        return rxBilling.getPurchases(BillingClient.SkuType.SUBS)
-                .map { mapper.mapFromBillingPurchases(it, TYPE_SUBSCRIPTION) }
-                .flatMap { purchases ->
-                    //we don't use zip() here because it crashes in case of errors in both sources
-                    return@flatMap rxBilling.getPurchases(BillingClient.SkuType.INAPP)
-                            .map { mapper.mapFromBillingPurchases(it, TYPE_PRODUCT) }
-                            .map { subscriptions -> return@map subscriptions + purchases }
-                }
-                .doOnSuccess { Timber.d("getPurchases $it") }
-                .doOnError { Timber.e(it) }
-                //by default billing client pushes result to UI thread, so we need to switch it to IO
-                .observeOn(Schedulers.io())
+    override fun getPurchases(): Single<List<PurchaseEntity>> = rxSingle {
+        val subs = billingKtx.getPurchases(BillingClient.ProductType.SUBS)
+        val subscriptionEntities = mapper.mapFromBillingPurchases(subs, TYPE_SUBSCRIPTION)
+
+        val inapp = billingKtx.getPurchases(BillingClient.ProductType.INAPP)
+        val productEntities = mapper.mapFromBillingPurchases(inapp, TYPE_PRODUCT)
+
+        val result = subscriptionEntities + productEntities
+        Timber.d("getPurchases $result")
+        result
     }
 
-    override fun consumeProducts(): Completable {
-        return rxBilling.getPurchases(BillingClient.SkuType.INAPP)
-                .flatMapPublisher { Flowable.fromIterable(it) }
-                .concatMapCompletable {
-                    rxBilling.consumeProduct(ConsumeParams.newBuilder()
-                            .setPurchaseToken(it.purchaseToken)
-                            .build())
-                }
-                .observeOn(Schedulers.io())
+    override fun consumeProducts(): Completable = rxCompletable {
+        val purchases = billingKtx.getPurchases(BillingClient.ProductType.INAPP)
+        purchases.forEach { purchase ->
+            billingKtx.consumeProduct(
+                ConsumeParams.newBuilder()
+                    .setPurchaseToken(purchase.purchaseToken)
+                    .build()
+            )
+        }
     }
 
-    override fun fetchHistory(): Completable {
-        return rxBilling.getPurchaseHistory(BillingClient.SkuType.SUBS)
-                .ignoreElement()
-                .andThen(rxBilling.getPurchaseHistory(BillingClient.SkuType.INAPP))
-                .ignoreElement()
-                .observeOn(Schedulers.io())
+    override fun fetchHistory(): Completable = rxCompletable {
+        // BillingKtx doesn't have getPurchaseHistory, use getPurchases instead
+        // This triggers a refresh of the purchases cache
+        billingKtx.getPurchases(BillingClient.ProductType.SUBS)
+        billingKtx.getPurchases(BillingClient.ProductType.INAPP)
     }
 
-    override fun acknowledge(): Completable =
-            rxBilling.getPurchases(BillingClient.SkuType.SUBS)
-                    .flatMap { subscriptions ->
-                        rxBilling.getPurchases(BillingClient.SkuType.INAPP)
-                                .map { products ->
-                                    subscriptions + products
-                                }
-                    }.map { list -> list.filter { !it.isAcknowledged } }
-                    .flatMapPublisher { Flowable.fromIterable(it) }
-                    .flatMapCompletable {
-                        rxBilling.acknowledge(AcknowledgePurchaseParams
-                                .newBuilder()
-                                .setPurchaseToken(it.purchaseToken)
-                                .build())
-                    }
-                    .observeOn(Schedulers.io())
+    override fun acknowledge(): Completable = rxCompletable {
+        val subs = billingKtx.getPurchases(BillingClient.ProductType.SUBS)
+        val inapp = billingKtx.getPurchases(BillingClient.ProductType.INAPP)
+
+        (subs + inapp)
+            .filter { !it.isAcknowledged }
+            .forEach { purchase ->
+                billingKtx.acknowledge(
+                    AcknowledgePurchaseParams.newBuilder()
+                        .setPurchaseToken(purchase.purchaseToken)
+                        .build()
+                )
+            }
+    }
 
     override suspend fun getProductsDetails(requests: Map<String, List<String>>): List<ProductDetails> =
         withContext(Dispatchers.IO) {
-            val scope = CoroutineScope(SupervisorJob())
-            val params: List<QueryProductDetailsParams> = requests
-                    .map { group ->
-                        val type = group.key
-                        val ids = group.value
-                        QueryProductDetailsParams.newBuilder()
-                                .setProductList(
-                                        ids.map {
-                                            QueryProductDetailsParams.Product.newBuilder()
-                                                    .setProductId(it)
-                                                    .setProductType(type)
-                                                    .build()
-                                        }
-                                ).build()
-                    }
+            val params: List<QueryProductDetailsParams> = requests.map { (type, ids) ->
+                QueryProductDetailsParams.newBuilder()
+                    .setProductList(
+                        ids.map { id ->
+                            QueryProductDetailsParams.Product.newBuilder()
+                                .setProductId(id)
+                                .setProductType(type)
+                                .build()
+                        }
+                    )
+                    .build()
+            }
 
-            return@withContext params.map {
-                scope.async {
-                    rxBilling.getProductDetails(it).await()
-                }
-            }.awaitAll().flatten()
+            params.map { async { billingKtx.getProductDetails(it) } }
+                .awaitAll()
+                .flatten()
         }
-
 }

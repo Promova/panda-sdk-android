@@ -18,34 +18,36 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingFlowParams
-import com.android.billingclient.api.SkuDetailsParams
+import com.android.billingclient.api.QueryProductDetailsParams
+import com.appsci.billingktx.client.BillingKtx
+import com.appsci.billingktx.client.PurchasesUpdate
+import com.appsci.billingktx.lifecycle.keepConnection
 import com.appsci.panda.sdk.Panda
 import com.appsci.panda.sdk.R
 import com.appsci.panda.sdk.databinding.PandaFragmentSubscriptionBinding
 import com.appsci.panda.sdk.domain.subscriptions.SubscriptionScreen
 import com.appsci.panda.sdk.domain.subscriptions.SubscriptionsRepository
 import com.appsci.panda.sdk.domain.utils.getStringOrNull
-import com.appsci.panda.sdk.domain.utils.rx.DefaultCompletableObserver
 import com.appsci.panda.sdk.domain.utils.rx.DefaultSingleObserver
 import com.appsci.panda.sdk.domain.utils.rx.Schedulers
-import com.gen.rxbilling.client.PurchasesUpdate
-import com.gen.rxbilling.client.RxBilling
-import com.gen.rxbilling.lifecycle.BillingConnectionManager
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import io.reactivex.disposables.CompositeDisposable
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import kotlinx.parcelize.Parcelize
 import org.json.JSONObject
 import timber.log.Timber
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 class SubscriptionFragment : Fragment() {
 
     @Inject
-    lateinit var billing: RxBilling
+    lateinit var billingKtx: BillingKtx
 
     @Inject
     lateinit var subscriptionsRepository: SubscriptionsRepository
@@ -87,20 +89,19 @@ class SubscriptionFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Panda.pandaComponent.inject(this)
-        lifecycle.addObserver(BillingConnectionManager(billing))
-        billing.getPurchaseHistory(BillingClient.ProductType.SUBS)
-            .subscribeOn(Schedulers.io())
-            .timeout(5, TimeUnit.SECONDS)
-            .subscribe(
-                {
-                    showTrialCompletable.complete(it.isEmpty())
-                },
-                {
-                    showTrialCompletable.complete(false)
-                    Timber.d("cannot load subscriptions' purchase history in time")
-                }
-            ).apply(disposeOnDestroyView::add)
+        billingKtx.keepConnection(this)
 
+        lifecycleScope.launch {
+            try {
+                withTimeout(5000) {
+                    val purchases = billingKtx.getPurchases(BillingClient.ProductType.SUBS)
+                    showTrialCompletable.complete(purchases.isEmpty())
+                }
+            } catch (e: Exception) {
+                showTrialCompletable.complete(false)
+                Timber.d("cannot load subscriptions' purchase history in time")
+            }
+        }
     }
 
     override fun onCreateView(
@@ -297,37 +298,46 @@ class SubscriptionFragment : Fragment() {
             }
 
         }
-        disposeOnDestroyView.addAll(
-            billing.observeSuccess()
-                .observeOn(Schedulers.mainThread())
-                .flatMapSingle {
-                    it.purchases.firstOrNull()
-                    Timber.d("observeSuccess $it")
-                    binding.loading.root.visibility = View.VISIBLE
-                    val purchase = it.purchases.first()
-                    val sku = purchase.products.first()
-                    Panda.onPurchase(screenExtra, purchase, getType(sku))
-                        .doAfterTerminate {
-                            binding.loading.root.visibility = View.GONE
+
+        // Observe purchase updates using Flow
+        lifecycleScope.launch {
+            billingKtx.observeUpdates()
+                .catch { e ->
+                    Timber.e(e)
+                    Panda.onError(e)
+                }
+                .collect { update ->
+                    when (update) {
+                        is PurchasesUpdate.Success -> {
+                            val purchase = update.purchases.firstOrNull()
+                            if (purchase != null) {
+                                Timber.d("observeSuccess $update")
+                                binding.loading.root.visibility = View.VISIBLE
+                                val productId = purchase.products.firstOrNull() ?: ""
+                                Panda.onPurchase(screenExtra, purchase, getType(productId))
+                                    .doAfterTerminate {
+                                        binding.loading.root.visibility = View.GONE
+                                    }
+                                    .subscribe({ success ->
+                                        Timber.d("onPurchase success=$success")
+                                    }, { error ->
+                                        Panda.onError(error)
+                                        Timber.e(error)
+                                    })
+                            }
                         }
-                }.subscribe({
-                    Timber.d("onPurchase success=$it")
-                }, {
-                    Panda.onError(it)
-                    Timber.e(it)
-                }),
-            billing.observeErrors()
-                .subscribe({
-                    if (it is PurchasesUpdate.Failed) {
-                        val throwable = RuntimeException("Billing update error: $it")
-                        Timber.e(throwable)
-                        Panda.onError(throwable)
+                        is PurchasesUpdate.Failed -> {
+                            val throwable = RuntimeException("Billing update error: code=${update.code}")
+                            Timber.e(throwable)
+                            Panda.onError(throwable)
+                        }
+                        is PurchasesUpdate.Canceled -> {
+                            Timber.d("Purchase cancelled")
+                        }
                     }
-                }, {
-                    Timber.e(it)
-                    Panda.onError(it)
-                })
-        )
+                }
+        }
+
         disposeOnDestroyView.add(
             subscriptionsRepository.getCachedOrDefaultScreen(screenExtra.id)
                 .subscribeOn(Schedulers.io())
@@ -445,25 +455,60 @@ class SubscriptionFragment : Fragment() {
         Panda.subscriptionSelect(screenExtra, id)
         Timber.d("purchase click $id")
         val type = getType(id)
-        billing.getSkuDetails(
-            SkuDetailsParams.newBuilder()
-                .setType(type)
-                .setSkusList(listOf(id))
-                .build()
-        ).observeOn(Schedulers.mainThread())
-            .flatMapCompletable {
-                billing.launchFlow(
-                    requireActivity(),
-                    BillingFlowParams.newBuilder()
-                        .setSkuDetails(it.first())
+
+        lifecycleScope.launch {
+            try {
+                val productList = listOf(
+                    QueryProductDetailsParams.Product.newBuilder()
+                        .setProductId(id)
+                        .setProductType(type)
                         .build()
                 )
+
+                val query = QueryProductDetailsParams.newBuilder()
+                    .setProductList(productList)
+                    .build()
+
+                val params = withContext(Dispatchers.IO) {
+                    billingKtx.getProductDetails(query).map { productDetails ->
+                        // For One-time products, "setOfferToken" method shouldn't be called.
+                        val offerToken = if (type == BillingClient.ProductType.SUBS) {
+                            productDetails.subscriptionOfferDetails
+                                // to ensure prioritization of subscription with offer(trial or intro payment)
+                                ?.firstOrNull { it.offerId != null }?.offerToken
+                                ?: productDetails.subscriptionOfferDetails?.firstOrNull()?.offerToken
+                        } else {
+                            null
+                        }
+
+                        BillingFlowParams.ProductDetailsParams.newBuilder()
+                            .setProductDetails(productDetails)
+                            .apply {
+                                if (offerToken != null) {
+                                    setOfferToken(offerToken)
+                                }
+                            }
+                            .build()
+                    }
+                }
+
+                if (params.isNotEmpty()) {
+                    billingKtx.launchFlow(
+                        activity = requireActivity(),
+                        params = BillingFlowParams.newBuilder()
+                            .setProductDetailsParamsList(params)
+                            .build()
+                    )
+                } else {
+                    val error = RuntimeException("Product details not found for $id")
+                    Panda.onError(error)
+                    Timber.e(error)
+                }
+            } catch (e: Exception) {
+                Panda.onError(e)
+                Timber.e(e)
             }
-            .doOnError {
-                Panda.onError(it)
-                Timber.e(it)
-            }
-            .subscribe(DefaultCompletableObserver())
+        }
     }
 
     private fun openExternalUrl(url: String) {
@@ -495,12 +540,3 @@ fun SubscriptionFragment.addPayload(json: JSONObject) {
     val args = this.arguments ?: Bundle()
     args.putString(SubscriptionFragment.EXTRA_PAYLOAD, json.toString())
 }
-
-fun RxBilling.observeSuccess() =
-    this.observeUpdates()
-        .filter { it is PurchasesUpdate.Success }
-        .map { it as PurchasesUpdate.Success }
-
-fun RxBilling.observeErrors() =
-    this.observeUpdates()
-        .filter { it !is PurchasesUpdate.Success }
