@@ -79,7 +79,7 @@ afterEvaluate {
         repositories {
             maven {
                 name = "GitHubPackages"
-                url = uri("https://maven.pkg.github.com/AppSci/panda-sdk-android")
+                url = uri("https://maven.pkg.github.com/Promova/panda-sdk-android")
                 credentials {
                     def username = localProperties['github.actor']?: System.getenv("GPR_USER")
                     def password = localProperties['github.token']?: System.getenv("GPR_API_KEY")
