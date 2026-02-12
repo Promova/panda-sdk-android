@@ -1,16 +1,15 @@
 package com.appsci.panda.sdk.data.subscriptions.local
 
 import androidx.room.*
-import io.reactivex.Single
 
 @Dao
 abstract class PurchaseDao {
 
     @Query("SELECT * FROM Purchase")
-    abstract fun selectPurchases(): Single<List<PurchaseEntity>>
+    abstract suspend fun selectPurchases(): List<PurchaseEntity>
 
     @Query("SELECT * FROM Purchase WHERE synced!=1")
-    abstract fun selectNotSentPurchases(): Single<List<PurchaseEntity>>
+    abstract suspend fun selectNotSentPurchases(): List<PurchaseEntity>
 
     @Query("SELECT * FROM Purchase where productId=:productId")
     abstract fun selectPurchase(productId: String): PurchaseEntity?

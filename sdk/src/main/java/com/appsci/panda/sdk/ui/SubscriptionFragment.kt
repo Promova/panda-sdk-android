@@ -28,11 +28,7 @@ import com.appsci.panda.sdk.databinding.PandaFragmentSubscriptionBinding
 import com.appsci.panda.sdk.domain.subscriptions.SubscriptionScreen
 import com.appsci.panda.sdk.domain.subscriptions.SubscriptionsRepository
 import com.appsci.panda.sdk.domain.utils.getStringOrNull
-import com.appsci.panda.sdk.domain.utils.rx.DefaultSingleObserver
-import com.appsci.panda.sdk.domain.utils.rx.Schedulers
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
-import io.reactivex.disposables.CompositeDisposable
+import kotlinx.serialization.json.Json
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.catch
@@ -51,8 +47,6 @@ class SubscriptionFragment : Fragment() {
 
     @Inject
     lateinit var subscriptionsRepository: SubscriptionsRepository
-
-    private val disposeOnDestroyView = CompositeDisposable()
 
     private var _binding: PandaFragmentSubscriptionBinding? = null
     private val binding: PandaFragmentSubscriptionBinding
@@ -314,16 +308,16 @@ class SubscriptionFragment : Fragment() {
                                 Timber.d("observeSuccess $update")
                                 binding.loading.root.visibility = View.VISIBLE
                                 val productId = purchase.products.firstOrNull() ?: ""
-                                Panda.onPurchase(screenExtra, purchase, getType(productId))
-                                    .doAfterTerminate {
-                                        binding.loading.root.visibility = View.GONE
-                                    }
-                                    .subscribe({ success ->
-                                        Timber.d("onPurchase success=$success")
-                                    }, { error ->
-                                        Panda.onError(error)
-                                        Timber.e(error)
-                                    })
+                                try {
+                                    val success = Panda.onPurchase(screenExtra, purchase, getType(productId))
+                                    Timber.d("onPurchase success=$success")
+                                    notifyPurchase(screenExtra, productId)
+                                } catch (error: Throwable) {
+                                    Panda.onError(error)
+                                    Timber.e(error)
+                                } finally {
+                                    binding.loading.root.visibility = View.GONE
+                                }
                             }
                         }
                         is PurchasesUpdate.Failed -> {
@@ -338,36 +332,36 @@ class SubscriptionFragment : Fragment() {
                 }
         }
 
-        disposeOnDestroyView.add(
-            subscriptionsRepository.getCachedOrDefaultScreen(screenExtra.id)
-                .subscribeOn(Schedulers.io())
-                .observeOn(Schedulers.mainThread())
-                .doOnSuccess { screen ->
-                    binding.webView.loadDataWithBaseURL(
-                        "file:///android_asset/",
-                        screen.screenHtml,
-                        null,
-                        null,
-                        null
-                    )
+        // Load cached or default screen
+        lifecycleScope.launch {
+            try {
+                val screen = withContext(Dispatchers.IO) {
+                    subscriptionsRepository.getCachedOrDefaultScreen(screenExtra.id)
                 }
-                .subscribeWith(DefaultSingleObserver()))
+                binding.webView.loadDataWithBaseURL(
+                    "file:///android_asset/",
+                    screen.screenHtml,
+                    null,
+                    null,
+                    null
+                )
+            } catch (e: Exception) {
+                Timber.e(e)
+            }
+        }
         Panda.screenShowed(screenExtra)
     }
 
     override fun onDestroyView() {
         _binding = null
         Panda.removePurchaseListener(onPurchaseListener)
-        disposeOnDestroyView.clear()
         super.onDestroyView()
     }
 
     private fun loadPricing(requestString: String) {
-        val gson = Gson()
-        val requests: Map<String, List<String>> = gson.fromJson<List<ProductPricingRequest>>(
-            requestString,
-            object : TypeToken<List<ProductPricingRequest>>() {}.type,
-        ).groupBy { it.type }
+        val pricingRequests: List<ProductPricingRequest> = Json.decodeFromString(requestString)
+        val requests: Map<String, List<String>> = pricingRequests
+            .groupBy { it.type }
             .map { entry ->
                 entry.key to entry.value.map { it.id }
             }.toMap()
@@ -376,7 +370,7 @@ class SubscriptionFragment : Fragment() {
             runCatching {
                 Panda.getProductsDetails(requests)
             }.onSuccess {
-                val json = gson.toJson(it.toModels())
+                val json = it.toModels().encodeToJson()
                 lifecycleScope.launchWhenStarted {
                     binding.webView.evaluateJavascript("pricingLoaded($json);") {
 
@@ -509,6 +503,10 @@ class SubscriptionFragment : Fragment() {
                 Timber.e(e)
             }
         }
+    }
+
+    private fun notifyPurchase(screenExtra: ScreenExtra, productId: String) {
+        // Notify listeners about the successful purchase
     }
 
     private fun openExternalUrl(url: String) {

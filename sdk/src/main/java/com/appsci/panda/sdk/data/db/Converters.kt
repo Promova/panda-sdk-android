@@ -1,9 +1,7 @@
 package com.appsci.panda.sdk.data.db
 
 import androidx.room.TypeConverter
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
-import com.google.gson.reflect.TypeToken
+import kotlinx.serialization.json.Json
 import org.threeten.bp.LocalDate
 import org.threeten.bp.LocalDateTime
 import org.threeten.bp.LocalTime
@@ -16,30 +14,29 @@ import org.threeten.bp.format.DateTimeFormatter
  **/
 class Converters {
 
-    private val gson: Gson = GsonBuilder().create()
-
     @TypeConverter
-    fun intListToString(listOfInts: List<Int>): String = gson.toJson(listOfInts)
+    fun intListToString(listOfInts: List<Int>): String = Json.encodeToString(listOfInts)
 
     @TypeConverter
     fun stringToIntList(string: String): List<Int> {
-        return gson.fromJson(string, object : TypeToken<List<Int>>() {}.type)
+        return Json.decodeFromString(string)
     }
 
     @TypeConverter
-    fun mapToString(map: Map<String, String>?): String = gson.toJson(map)
+    fun mapToString(map: Map<String, String>?): String = Json.encodeToString(map)
 
     @TypeConverter
     fun stringToMap(string: String?): Map<String, String>? {
-        return gson.fromJson(string, object : TypeToken<Map<String, String>>() {}.type)
+        if (string == null) return null
+        return Json.decodeFromString(string)
     }
 
     @TypeConverter
-    fun longsListToString(listOfLongs: List<Long>): String = gson.toJson(listOfLongs)
+    fun longsListToString(listOfLongs: List<Long>): String = Json.encodeToString(listOfLongs)
 
     @TypeConverter
     fun stringToLongList(string: String): List<Long> {
-        return gson.fromJson(string, object : TypeToken<List<Long>>() {}.type)
+        return Json.decodeFromString(string)
     }
 
     @TypeConverter

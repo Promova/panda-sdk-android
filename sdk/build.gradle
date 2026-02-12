@@ -2,6 +2,8 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-parcelize'
 apply plugin: 'kotlin-kapt'
+apply plugin: 'kotlinx-serialization'
+apply plugin: 'com.google.devtools.ksp'
 apply plugin: 'maven-publish'
 
 android {
@@ -19,13 +21,6 @@ android {
 
         buildConfigField "String", "PANDA_ENDPOINT_PROD", "\"https://api.panda.boosters.company/\""
         buildConfigField "String", "PANDA_ENDPOINT_STAGE", "\"https://api.panda-stage.boosters.company/\""
-
-        javaCompileOptions {
-            annotationProcessorOptions {
-                arguments = ["room.schemaLocation": "$projectDir/schemas".toString()]
-//                includeCompileClasspath = true
-            }
-        }
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -51,6 +46,9 @@ android {
         unitTests.all {
             useJUnitPlatform()
         }
+    }
+    ksp {
+        arg("room.schemaLocation", "$projectDir/schemas")
     }
     buildFeatures {
         viewBinding true
@@ -107,25 +105,18 @@ dependencies {
     // Kotlin dependencies
     implementation kotlinDependencies.kotlinStdLib
     implementation kotlinDependencies.androidKtx
-    implementation kotlinDependencies.kotlinReflect
-
-    // Rx + Coroutines
-    implementation dataDependencies.rxJava
-    implementation dataDependencies.rxAndroid
-    implementation dataDependencies.rxKotlin
 
     implementation dataDependencies.room
-    implementation dataDependencies.roomRxJava
-    kapt dataDependencies.roomCompiler
+    implementation dataDependencies.roomKtx
+    ksp dataDependencies.roomCompiler
 
     implementation dataDependencies.threeten
-    implementation dataDependencies.gson
     implementation dataDependencies.okHttp
     implementation dataDependencies.okHttpInterceptor
     implementation dataDependencies.retrofit
-    implementation dataDependencies.retrofitGsonConverter
-    implementation dataDependencies.retrofitRxJavaAdapter
     implementation dataDependencies.retrofitScalarsConverter
+    implementation dataDependencies.retrofitKotlinxConverter
+    implementation dataDependencies.kotlinxSerializationJson
 
     implementation platform('com.google.firebase:firebase-bom:33.16.0')
     implementation 'com.google.firebase:firebase-messaging'
@@ -139,7 +130,6 @@ dependencies {
 
     implementation coroutineDependencies.core
     implementation coroutineDependencies.android
-    implementation coroutineDependencies.rx2
 
 
     testImplementation testDependencies.jupiterApi

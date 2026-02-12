@@ -6,22 +6,18 @@ import com.appsci.panda.sdk.data.subscriptions.PurchasesMapper
 import com.appsci.panda.sdk.data.subscriptions.local.PurchaseEntity
 import com.appsci.panda.sdk.data.subscriptions.local.TYPE_PRODUCT
 import com.appsci.panda.sdk.data.subscriptions.local.TYPE_SUBSCRIPTION
-import io.reactivex.Completable
-import io.reactivex.Single
 import kotlinx.coroutines.*
-import kotlinx.coroutines.rx2.rxCompletable
-import kotlinx.coroutines.rx2.rxSingle
 import timber.log.Timber
 
 interface PurchasesGoogleStore {
 
-    fun getPurchases(): Single<List<PurchaseEntity>>
+    suspend fun getPurchases(): List<PurchaseEntity>
 
-    fun consumeProducts(): Completable
+    suspend fun consumeProducts()
 
-    fun fetchHistory(): Completable
+    suspend fun fetchHistory()
 
-    fun acknowledge(): Completable
+    suspend fun acknowledge()
 
     suspend fun getProductsDetails(requests: Map<String, List<String>>): List<ProductDetails>
 
@@ -32,7 +28,7 @@ class PurchasesGoogleStoreImpl(
         private val mapper: PurchasesMapper,
 ) : PurchasesGoogleStore {
 
-    override fun getPurchases(): Single<List<PurchaseEntity>> = rxSingle {
+    override suspend fun getPurchases(): List<PurchaseEntity> {
         val subs = billingKtx.getPurchases(BillingClient.ProductType.SUBS)
         val subscriptionEntities = mapper.mapFromBillingPurchases(subs, TYPE_SUBSCRIPTION)
 
@@ -41,10 +37,10 @@ class PurchasesGoogleStoreImpl(
 
         val result = subscriptionEntities + productEntities
         Timber.d("getPurchases $result")
-        result
+        return result
     }
 
-    override fun consumeProducts(): Completable = rxCompletable {
+    override suspend fun consumeProducts() {
         val purchases = billingKtx.getPurchases(BillingClient.ProductType.INAPP)
         purchases.forEach { purchase ->
             billingKtx.consumeProduct(
@@ -55,14 +51,12 @@ class PurchasesGoogleStoreImpl(
         }
     }
 
-    override fun fetchHistory(): Completable = rxCompletable {
-        // BillingKtx doesn't have getPurchaseHistory, use getPurchases instead
-        // This triggers a refresh of the purchases cache
+    override suspend fun fetchHistory() {
         billingKtx.getPurchases(BillingClient.ProductType.SUBS)
         billingKtx.getPurchases(BillingClient.ProductType.INAPP)
     }
 
-    override fun acknowledge(): Completable = rxCompletable {
+    override suspend fun acknowledge() {
         val subs = billingKtx.getPurchases(BillingClient.ProductType.SUBS)
         val inapp = billingKtx.getPurchases(BillingClient.ProductType.INAPP)
 

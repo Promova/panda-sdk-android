@@ -5,8 +5,6 @@ import android.app.Application
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.ProductDetails
 import com.appsci.panda.sdk.domain.subscriptions.*
-import com.appsci.panda.sdk.domain.utils.rx.DefaultSchedulerProvider
-import com.appsci.panda.sdk.domain.utils.rx.Schedulers
 import com.appsci.panda.sdk.injection.components.DaggerPandaComponent
 import com.appsci.panda.sdk.injection.components.PandaComponent
 import com.appsci.panda.sdk.injection.modules.AppModule
@@ -15,9 +13,7 @@ import com.appsci.panda.sdk.injection.modules.NetworkModule
 import com.appsci.panda.sdk.ui.ScreenExtra
 import com.jakewharton.threetenabp.AndroidThreeTen
 import dagger.Lazy
-import io.reactivex.Single
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.rx2.await
 import kotlinx.coroutines.withContext
 import okhttp3.logging.HttpLoggingInterceptor
 import javax.inject.Inject
@@ -62,15 +58,11 @@ object Panda {
     @JvmStatic
     suspend fun clearAdvId() = withContext(Dispatchers.IO) {
         panda.clearAdvId()
-            .subscribeOn(Schedulers.io())
-            .await()
     }
 
     @JvmStatic
     suspend fun syncUser(): String = withContext(Dispatchers.IO) {
         panda.authorize()
-            .subscribeOn(Schedulers.io())
-            .await()
     }
 
     @JvmStatic
@@ -79,8 +71,6 @@ object Panda {
         fbp: String?,
     ) = withContext(Dispatchers.IO) {
         panda.setFbIds(fbc = fbc, fbp = fbp)
-            .subscribeOn(Schedulers.io())
-            .await()
     }
 
 
@@ -138,8 +128,6 @@ object Panda {
     @JvmStatic
     suspend fun syncSubscriptions() = withContext(Dispatchers.IO) {
         panda.syncSubscriptions()
-            .subscribeOn(Schedulers.io())
-            .await()
     }
 
     /**
@@ -148,8 +136,6 @@ object Panda {
     @JvmStatic
     suspend fun getSubscriptionState(): SubscriptionState = withContext(Dispatchers.IO) {
         panda.getSubscriptionState()
-            .subscribeOn(Schedulers.io())
-            .await()
     }
 
     /**
@@ -158,8 +144,6 @@ object Panda {
     @JvmStatic
     suspend fun consumeProducts() = withContext(Dispatchers.IO) {
         panda.consumeProducts()
-            .subscribeOn(Schedulers.io())
-            .await()
     }
 
     /**
@@ -170,9 +154,6 @@ object Panda {
     suspend fun prefetchSubscriptionScreen(id: String) =
         withContext(Dispatchers.IO) {
             panda.prefetchSubscriptionScreen(id)
-                .subscribeOn(Schedulers.io())
-                .ignoreElement()
-                .await()
         }
 
     @JvmStatic
@@ -185,14 +166,12 @@ object Panda {
         id: String,
     ): SubscriptionScreen = withContext(Dispatchers.IO) {
         panda.getSubscriptionScreen(id)
-            .subscribeOn(Schedulers.io())
-            .await()
     }
 
     @JvmStatic
     suspend fun getCachedOrDefaultSubscriptionScreen(
         id: String,
-    ): SubscriptionScreen = panda.getCachedOrDefaultSubscriptionScreen(id).await()
+    ): SubscriptionScreen = panda.getCachedOrDefaultSubscriptionScreen(id)
 
     @JvmStatic
     suspend fun getProductsDetails(requests: Map<String, List<String>>): List<ProductDetails> =
@@ -203,8 +182,7 @@ object Panda {
     @JvmStatic
     suspend fun dropData() = withContext(Dispatchers.IO) {
         panda.stopNetwork()
-            .andThen(panda.clearLocalData())
-            .await()
+        panda.clearLocalData()
     }
 
     fun addDismissListener(onDismiss: () -> Unit) {
@@ -356,16 +334,15 @@ object Panda {
         }
     }
 
-    suspend fun restore(): List<String> =
+    suspend fun restore(): List<String> = withContext(Dispatchers.IO) {
         panda.restore()
-            .subscribeOn(Schedulers.io())
-            .await()
+    }
 
-    internal fun onPurchase(
+    internal suspend fun onPurchase(
         screenExtra: ScreenExtra,
         purchase: GooglePurchase,
         type: String,
-    ): Single<Boolean> {
+    ): Boolean {
         val purchaseType = when (type) {
             BillingClient.ProductType.SUBS -> SkuType.SUBSCRIPTION
             else -> SkuType.INAPP
@@ -373,21 +350,16 @@ object Panda {
         val productId = purchase.products.firstOrNull() ?: error("ProductId is not found")
         val orderId = purchase.orderId ?: error("ProductId is not found")
 
-        return panda.validatePurchase(
-            Purchase(
-                id = productId,
-                type = purchaseType,
-                orderId = orderId,
-                token = purchase.purchaseToken
+        return withContext(Dispatchers.IO) {
+            panda.validatePurchase(
+                Purchase(
+                    id = productId,
+                    type = purchaseType,
+                    orderId = orderId,
+                    token = purchase.purchaseToken
+                )
             )
-        )
-            .subscribeOn(Schedulers.io())
-            .observeOn(Schedulers.mainThread())
-            .doOnError { t ->
-                notifyError(t)
-            }.doOnSuccess {
-                notifyPurchase(screenExtra, productId)
-            }
+        }
     }
 
     internal fun onError(throwable: Throwable) {
@@ -452,7 +424,6 @@ object Panda {
     ) {
         if (initialized) return
         this.context = context
-        Schedulers.setInstance(DefaultSchedulerProvider())
         AndroidThreeTen.init(context)
         val wrapper = PandaDependencies()
         pandaComponent = DaggerPandaComponent
@@ -479,4 +450,3 @@ class PandaDependencies {
     @Inject
     lateinit var panda: IPanda
 }
-

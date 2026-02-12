@@ -1,8 +1,10 @@
 package com.appsci.panda.sdk.data.subscriptions.rest
 
-import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class SendSubscriptionResponse(
-        @SerializedName("active")
-        val active: Boolean
+    @SerialName("active")
+    val active: Boolean
 )

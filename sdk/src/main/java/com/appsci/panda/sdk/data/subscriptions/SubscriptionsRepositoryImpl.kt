@@ -12,11 +12,10 @@ import com.appsci.panda.sdk.domain.subscriptions.Purchase
 import com.appsci.panda.sdk.domain.subscriptions.SubscriptionScreen
 import com.appsci.panda.sdk.domain.subscriptions.SubscriptionState
 import com.appsci.panda.sdk.domain.subscriptions.SubscriptionsRepository
-import com.appsci.panda.sdk.domain.utils.rx.DefaultCompletableObserver
-import io.reactivex.Completable
-import io.reactivex.Flowable
-import io.reactivex.Maybe
-import io.reactivex.Single
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import timber.log.Timber
 
 class SubscriptionsRepositoryImpl(
@@ -30,89 +29,74 @@ class SubscriptionsRepositoryImpl(
 ) : SubscriptionsRepository {
 
     private val loadedScreens = mutableMapOf<String, ScreenData>()
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    override fun sync(): Completable {
-        return fetchHistory()
-            .andThen(saveGooglePurchases())
-            .doOnComplete {
-                acknowledge()
-            }
-            .andThen(deviceDao.requireUserId())
-            .flatMapCompletable { userId ->
-                localStore.getNotSentPurchases()
-                    .flatMapPublisher { Flowable.fromIterable(it) }
-                    .concatMapCompletable { entity ->
-                        val purchase = mapper.mapToDomain(entity)
-                        return@concatMapCompletable restStore.sendPurchase(purchase, userId)
-                            .doOnSuccess {
-                                localStore.markSynced(entity.productId)
-                            }.ignoreElement()
-                    }
-            }
-    }
-
-    override fun validatePurchase(purchase: Purchase): Single<Boolean> {
-
-        return saveGooglePurchases()
-            .andThen(deviceDao.requireUserId())
-            .flatMap {
-                restStore.sendPurchase(purchase, it)
-                    .doOnSuccess {
-                        localStore.markSynced(purchase.id)
-                    }
-            }.doAfterSuccess {
-                acknowledge()
-            }
-    }
-
-    override fun restore(): Single<List<String>> =
+    override suspend fun sync() {
         fetchHistory()
-            .andThen(saveGooglePurchases())
-            .andThen(deviceDao.requireUserId())
-            .flatMap { userId ->
-                googleStore.getPurchases()
-                    .flatMapPublisher { Flowable.fromIterable(it) }
-                    .flatMapMaybe { entity ->
-                        val purchase = mapper.mapToDomain(entity)
-                        return@flatMapMaybe restStore.sendPurchase(purchase, userId)
-                            .doOnSuccess {
-                                localStore.markSynced(entity.productId)
-                            }.filter { it }
-                            .map { entity.productId }
-                    }.toList()
-            }
-
-    override fun consumeProducts(): Completable =
-        googleStore.consumeProducts()
-            .andThen(googleStore.fetchHistory())
-
-    override fun prefetchSubscriptionScreen(
-        id: String,
-    ): Single<SubscriptionScreen> {
-        return loadSubscriptionScreen(id)
-            .map {
-                SubscriptionScreen(
-                    id = it.id,
-                    name = it.name,
-                    screenHtml = it.screenHtml
-                )
-            }
+        saveGooglePurchases()
+        acknowledge()
+        val userId = deviceDao.requireUserId()
+            ?: error("User not authorized")
+        val notSent = localStore.getNotSentPurchases()
+        for (entity in notSent) {
+            val purchase = mapper.mapToDomain(entity)
+            restStore.sendPurchase(purchase, userId)
+            localStore.markSynced(entity.productId)
+        }
     }
 
-    override fun getSubscriptionScreen(id: String): Single<SubscriptionScreen> {
-        val cachedScreen = loadedScreens[id]
-        return (if (cachedScreen != null) {
-            Single.just(cachedScreen)
-        } else {
-            loadSubscriptionScreen(id)
-        }).map {
-            SubscriptionScreen(
-                id = it.id,
-                name = it.name,
-                screenHtml = it.screenHtml
-            )
-        }
+    override suspend fun validatePurchase(purchase: Purchase): Boolean {
+        saveGooglePurchases()
+        val userId = deviceDao.requireUserId()
+            ?: error("User not authorized")
+        val result = restStore.sendPurchase(purchase, userId)
+        localStore.markSynced(purchase.id)
+        acknowledge()
+        return result
+    }
 
+    override suspend fun restore(): List<String> {
+        fetchHistory()
+        saveGooglePurchases()
+        val userId = deviceDao.requireUserId()
+            ?: error("User not authorized")
+        val purchases = googleStore.getPurchases()
+        val restoredIds = mutableListOf<String>()
+        for (entity in purchases) {
+            val purchase = mapper.mapToDomain(entity)
+            val active = restStore.sendPurchase(purchase, userId)
+            localStore.markSynced(entity.productId)
+            if (active) {
+                restoredIds.add(entity.productId)
+            }
+        }
+        return restoredIds
+    }
+
+    override suspend fun consumeProducts() {
+        googleStore.consumeProducts()
+        googleStore.fetchHistory()
+    }
+
+    override suspend fun prefetchSubscriptionScreen(
+        id: String,
+    ): SubscriptionScreen {
+        val screenData = loadSubscriptionScreen(id)
+        return SubscriptionScreen(
+            id = screenData.id,
+            name = screenData.name,
+            screenHtml = screenData.screenHtml
+        )
+    }
+
+    override suspend fun getSubscriptionScreen(id: String): SubscriptionScreen {
+        val cachedScreen = loadedScreens[id]
+        val screenData = cachedScreen ?: loadSubscriptionScreen(id)
+        return SubscriptionScreen(
+            id = screenData.id,
+            name = screenData.name,
+            screenHtml = screenData.screenHtml
+        )
     }
 
     override fun getCachedScreen(id: String): SubscriptionScreen? {
@@ -125,7 +109,7 @@ class SubscriptionsRepositoryImpl(
         }
     }
 
-    override fun getCachedOrDefaultScreen(id: String): Single<SubscriptionScreen> {
+    override suspend fun getCachedOrDefaultScreen(id: String): SubscriptionScreen {
         val cachedScreen = loadedScreens.values.firstOrNull {
             it.id == id
         }?.let {
@@ -135,58 +119,59 @@ class SubscriptionsRepositoryImpl(
                 screenHtml = it.screenHtml
             )
         }
-        val cachedMaybe = cachedScreen?.let {
-            Maybe.just(it)
-        } ?: Maybe.empty()
-        return cachedMaybe
-            .switchIfEmpty(getFallbackScreen().toMaybe())
-            .toSingle()
+        return cachedScreen ?: getFallbackScreen()
     }
 
-    override fun getFallbackScreen(): Single<SubscriptionScreen> =
+    override suspend fun getFallbackScreen(): SubscriptionScreen =
         fileStore.getSubscriptionScreen()
 
     override suspend fun getProductsDetails(requests: Map<String, List<String>>): List<ProductDetails> =
         googleStore.getProductsDetails(requests)
 
-    override fun getSubscriptionState(): Single<SubscriptionState> =
-        deviceDao.requireUserId()
-            .flatMap { restStore.getSubscriptionState(it) }
+    override suspend fun getSubscriptionState(): SubscriptionState {
+        val userId = deviceDao.requireUserId()
+            ?: error("User not authorized")
+        return restStore.getSubscriptionState(userId)
+    }
 
-    override fun fetchHistory(): Completable {
-        return googleStore.fetchHistory()
-            .doOnComplete {
-                Timber.d("fetchHistory success")
-            }.doOnError {
-                Timber.e(it)
-            }
+    override suspend fun fetchHistory() {
+        try {
+            googleStore.fetchHistory()
+            Timber.d("fetchHistory success")
+        } catch (e: Exception) {
+            Timber.e(e)
+        }
     }
 
     private fun acknowledge() {
-        googleStore.acknowledge()
-            .subscribe(DefaultCompletableObserver())
-    }
-
-    private fun saveGooglePurchases(): Completable {
-
-        //active subscriptions from billing client
-        return googleStore.getPurchases()
-            .flatMap { purchases ->
-                intentValidator.validateIntent()
-                    .toSingle { purchases }
-                    .onErrorReturnItem(emptyList())
+        scope.launch {
+            try {
+                googleStore.acknowledge()
+            } catch (e: Exception) {
+                Timber.e(e)
             }
-            .doOnSuccess { purchases ->
-                localStore.savePurchases(purchases)
-            }.ignoreElement()
+        }
     }
 
-    private fun loadSubscriptionScreen(id: String): Single<ScreenData> {
-        Timber.d("loadSubscriptionScreen $id")
-        return restStore.getSubscriptionScreen(
-            id = id,
-        ).doOnSuccess {
-            loadedScreens[id] = it
+    private suspend fun saveGooglePurchases() {
+        val purchases = try {
+            val googlePurchases = googleStore.getPurchases()
+            try {
+                intentValidator.validateIntent()
+                googlePurchases
+            } catch (_: Exception) {
+                emptyList()
+            }
+        } catch (_: Exception) {
+            emptyList()
         }
+        localStore.savePurchases(purchases)
+    }
+
+    private suspend fun loadSubscriptionScreen(id: String): ScreenData {
+        Timber.d("loadSubscriptionScreen $id")
+        val screenData = restStore.getSubscriptionScreen(id = id)
+        loadedScreens[id] = screenData
+        return screenData
     }
 }

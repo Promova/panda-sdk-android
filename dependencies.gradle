@@ -35,29 +35,18 @@ ext {
     lifecycleVer = "2.9.1"
     coreRuntimeVer = "2.0.1"
 
-    // Redux
-    rxReduxVer = '1.0.0'
-
     // MultiDex
     multiDexVer = '2.0.0'
 
     // Dagger
     daggerVer = '2.56.2'
 
-    // Reactive Extensions
-    rxJava2Ver = '2.2.21'
-    rxAndroid2Ver = '2.1.1'
-    rxBinding2Ver = '2.2.0'
-    rxKotlinVer = '2.4.0'
-
-
     // Networking
     okHttpVer = '5.1.0'
-    retrofitVer = '2.9.0'
-    coroutinesAdapterVer = '0.9.2'
+    retrofitVer = '3.0.0'
 
-    // Gson
-    gsonVer = '2.8.6'
+    // kotlinx-serialization
+    kotlinxSerializationVer = '1.9.0'
 
     autoValueVer = '1.6.5'
 
@@ -127,8 +116,6 @@ ext {
     coreTestingVer = '2.0.0-alpha1'
     extJUnitVer = '1.1.1'
     extTruthVer = '1.2.0'
-    rxIdlerVer = '0.9.0'
-
     // Dependencies
     supportDependencies = [
             appCompat       : "androidx.appcompat:appcompat:$appCompatVer",
@@ -172,20 +159,14 @@ ext {
     dataDependencies = [
             dagger                   : "com.google.dagger:dagger:$daggerVer",
             daggerCompiler           : "com.google.dagger:dagger-compiler:$daggerVer",
-            rxJava                   : "io.reactivex.rxjava2:rxjava:$rxJava2Ver",
-            rxKotlin                 : "io.reactivex.rxjava2:rxkotlin:$rxKotlinVer",
-            rxAndroid                : "io.reactivex.rxjava2:rxandroid:$rxAndroid2Ver",
-            rxBinding                : "com.jakewharton.rxbinding2:rxbinding:$rxBinding2Ver",
-            gson                     : "com.google.code.gson:gson:$gsonVer",
             okHttp                   : "com.squareup.okhttp3:okhttp:$okHttpVer",
             okHttpInterceptor        : "com.squareup.okhttp3:logging-interceptor:$okHttpVer",
             retrofit                 : "com.squareup.retrofit2:retrofit:$retrofitVer",
-            retrofitGsonConverter    : "com.squareup.retrofit2:converter-gson:$retrofitVer",
-            retrofitRxJavaAdapter    : "com.squareup.retrofit2:adapter-rxjava2:$retrofitVer",
             retrofitScalarsConverter : "com.squareup.retrofit2:converter-scalars:$retrofitVer",
-            retrofitCoroutinesAdapter: "com.jakewharton.retrofit:retrofit2-kotlin-coroutines-adapter:$coroutinesAdapterVer",
+            retrofitKotlinxConverter : "com.squareup.retrofit2:converter-kotlinx-serialization:$retrofitVer",
+            kotlinxSerializationJson : "org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVer",
             room                     : "androidx.room:room-runtime:$roomVer",
-            roomRxJava               : "androidx.room:room-rxjava2:$roomVer",
+            roomKtx                  : "androidx.room:room-ktx:$roomVer",
             roomCompiler             : "androidx.room:room-compiler:$roomVer",
             billingKtx               : "com.github.AppSci:billing-ktx:$billingKtxVer",
             billingClient            : "com.android.billingclient:billing-ktx:$billingClientVer",
@@ -194,7 +175,6 @@ ext {
 
     coroutineDependencies = [
             "core"   : "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutineVer",
-            "rx2"    : "org.jetbrains.kotlinx:kotlinx-coroutines-rx2:$coroutineVer",
             "android": "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutineVer",
             "test"   : "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutineVer"
     ]
@@ -225,7 +205,6 @@ ext {
             espressoIntents   : "androidx.test.espresso:espresso-intents:$espressoCoreVer",
             extJUnit          : "androidx.test.ext:junit:$extJUnitVer",
             extTruth          : "androidx.test.ext:truth:$extTruthVer",
-            rxIdler           : "com.squareup.rx.idler:rx2-idler:$rxIdlerVer",
             testRules         : "androidx.test:rules:$runnerVer",
             supportAnnotations: "androidx.annotation:annotation:$annotationsVer",
             testRoom          : "androidx.room:room-testing:$roomVer",

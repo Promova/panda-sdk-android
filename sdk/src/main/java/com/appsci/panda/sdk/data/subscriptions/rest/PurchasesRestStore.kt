@@ -5,17 +5,15 @@ import com.appsci.panda.sdk.data.network.ScreenApi
 import com.appsci.panda.sdk.domain.subscriptions.Purchase
 import com.appsci.panda.sdk.domain.subscriptions.SkuType
 import com.appsci.panda.sdk.domain.subscriptions.SubscriptionState
-import io.reactivex.Single
-import kotlinx.coroutines.rx2.rxSingle
 import timber.log.Timber
 
 interface PurchasesRestStore {
 
-    fun sendPurchase(purchase: Purchase, userId: String): Single<Boolean>
+    suspend fun sendPurchase(purchase: Purchase, userId: String): Boolean
 
-    fun getSubscriptionState(userId: String): Single<SubscriptionState>
+    suspend fun getSubscriptionState(userId: String): SubscriptionState
 
-    fun getSubscriptionScreen(id: String): Single<ScreenData>
+    suspend fun getSubscriptionScreen(id: String): ScreenData
 }
 
 class PurchasesRestStoreImpl(
@@ -23,8 +21,8 @@ class PurchasesRestStoreImpl(
     private val screenApi: ScreenApi,
 ) : PurchasesRestStore {
 
-    override fun sendPurchase(purchase: Purchase, userId: String): Single<Boolean> {
-        return when (purchase.type) {
+    override suspend fun sendPurchase(purchase: Purchase, userId: String): Boolean {
+        val response = when (purchase.type) {
             SkuType.SUBSCRIPTION ->
                 pandaApi.sendSubscription(
                     SubscriptionRequest(
@@ -44,26 +42,23 @@ class PurchasesRestStoreImpl(
                     ),
                     userId = userId
                 )
-        }.map { it.active }
+        }
+        return response.active
     }
 
-    override fun getSubscriptionState(userId: String): Single<SubscriptionState> =
-        pandaApi.getSubscriptionStatus(userId)
-            .map { SubscriptionState.map(it) }
+    override suspend fun getSubscriptionState(userId: String): SubscriptionState =
+        SubscriptionState.map(pandaApi.getSubscriptionStatus(userId))
 
-    override fun getSubscriptionScreen(
+    override suspend fun getSubscriptionScreen(
         id: String,
-    ): Single<ScreenData> =
-        rxSingle {
-            Timber.d("getSubscriptionScreen: $id")
-            val screenData = screenApi.getSubscriptionScreen(id)
-            val html = screenApi.getScreenHtml(screenData.htmlUrl)
-            ScreenData(
-                id = screenData.id,
-                name = screenData.name,
-                screenHtml = html,
-            )
-        }
-
-
+    ): ScreenData {
+        Timber.d("getSubscriptionScreen: $id")
+        val screenData = screenApi.getSubscriptionScreen(id)
+        val html = screenApi.getScreenHtml(screenData.htmlUrl)
+        return ScreenData(
+            id = screenData.id,
+            name = screenData.name,
+            screenHtml = html,
+        )
+    }
 }

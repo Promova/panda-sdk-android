@@ -1,21 +1,18 @@
 package com.appsci.panda.sdk.domain.device
 
-import io.reactivex.Completable
-import io.reactivex.Single
-
 interface DeviceRepository {
 
     val pandaUserId: String?
 
-    fun authorize(): Single<Device>
+    suspend fun authorize(): Device
 
-    fun clearAdvId(): Completable
+    suspend fun clearAdvId()
 
-    fun ensureAuthorized(): Completable
+    suspend fun ensureAuthorized()
 
-    fun getAuthState(): Single<AuthState>
+    suspend fun getAuthState(): AuthState
 
-    fun deleteDevice(): Completable
+    suspend fun deleteDevice()
 
-    fun clearLocalData(): Completable
+    suspend fun clearLocalData()
 }

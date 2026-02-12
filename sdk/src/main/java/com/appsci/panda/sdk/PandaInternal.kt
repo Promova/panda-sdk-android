@@ -11,46 +11,42 @@ import com.appsci.panda.sdk.domain.subscriptions.SubscriptionsRepository
 import com.appsci.panda.sdk.domain.utils.DeviceManager
 import com.appsci.panda.sdk.domain.utils.LocalPropertiesDataSource
 import com.appsci.panda.sdk.domain.utils.Preferences
-import com.appsci.panda.sdk.domain.utils.rx.Schedulers
 import dagger.Lazy
-import io.reactivex.Completable
-import io.reactivex.Single
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.rx2.await
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import timber.log.Timber
-import java.util.concurrent.TimeUnit
 
 interface IPanda {
     val pandaUserId: String?
 
     fun onStart()
-    fun authorize(): Single<String>
-    fun clearAdvId(): Completable
-    fun syncSubscriptions(): Completable
-    fun validatePurchase(purchase: Purchase): Single<Boolean>
-    fun restore(): Single<List<String>>
-    fun getSubscriptionState(): Single<SubscriptionState>
-    fun prefetchSubscriptionScreen(
+    suspend fun authorize(): String
+    suspend fun clearAdvId()
+    suspend fun syncSubscriptions()
+    suspend fun validatePurchase(purchase: Purchase): Boolean
+    suspend fun restore(): List<String>
+    suspend fun getSubscriptionState(): SubscriptionState
+    suspend fun prefetchSubscriptionScreen(
         id: String,
-    ): Single<SubscriptionScreen>
+    ): SubscriptionScreen
 
-    fun getSubscriptionScreen(
+    suspend fun getSubscriptionScreen(
         id: String,
         timeoutMs: Long = 5000L,
-    ): Single<SubscriptionScreen>
+    ): SubscriptionScreen
 
     fun getCachedSubscriptionScreen(
         id: String,
     ): SubscriptionScreen?
 
-    fun getCachedOrDefaultSubscriptionScreen(
+    suspend fun getCachedOrDefaultSubscriptionScreen(
         id: String,
-    ): Single<SubscriptionScreen>
+    ): SubscriptionScreen
 
-    fun consumeProducts(): Completable
-    fun setAppsflyerId(id: String): Completable
-    fun setFbIds(fbc: String?, fbp: String?): Completable
+    suspend fun consumeProducts()
+    suspend fun setAppsflyerId(id: String)
+    suspend fun setFbIds(fbc: String?, fbp: String?)
     fun saveLoginData(loginData: LoginData)
     fun saveCustomUserId(id: String?)
     suspend fun setUserProperty(key: String, value: String)
@@ -62,8 +58,8 @@ interface IPanda {
      * save appsflyer id in local storage, will be used in next update request
      */
     fun saveAppsflyerId(id: String)
-    fun stopNetwork(): Completable
-    fun clearLocalData(): Completable
+    fun stopNetwork()
+    suspend fun clearLocalData()
 }
 
 class PandaImpl(
@@ -106,9 +102,8 @@ class PandaImpl(
         }
     }
 
-    override fun authorize(): Single<String> =
-        deviceRepository.authorize()
-            .map { it.id }
+    override suspend fun authorize(): String =
+        deviceRepository.authorize().id
 
     override fun saveCustomUserId(id: String?) {
         if (preferences.customUserId == id) return
@@ -118,10 +113,10 @@ class PandaImpl(
     override suspend fun setUserProperty(key: String, value: String) {
         propertiesDataSource.putProperty(key, value)
         withContext(Dispatchers.IO) {
-            deviceRepository.authorize()
-                .ignoreElement()
-                .onErrorComplete()
-                .await()
+            try {
+                deviceRepository.authorize()
+            } catch (_: Exception) {
+            }
         }
     }
 
@@ -130,10 +125,10 @@ class PandaImpl(
             propertiesDataSource.putProperty(key, value)
         }
         withContext(Dispatchers.IO) {
-            deviceRepository.authorize()
-                .ignoreElement()
-                .onErrorComplete()
-                .await()
+            try {
+                deviceRepository.authorize()
+            } catch (_: Exception) {
+            }
         }
     }
 
@@ -141,33 +136,31 @@ class PandaImpl(
         subscriptionsRepository.getProductsDetails(requests)
 
     override suspend fun sendFeedback(screenId: String, answer: String) {
-        deviceRepository.ensureAuthorized().await()
+        deviceRepository.ensureAuthorized()
         feedbackRepository.sendFeedback(screenId = screenId, answer = answer)
     }
 
-    override fun clearAdvId(): Completable {
-        return Completable.defer {
-            deviceRepository.clearAdvId()
-        }
+    override suspend fun clearAdvId() {
+        deviceRepository.clearAdvId()
     }
 
-    override fun setAppsflyerId(id: String): Completable {
-        if (preferences.appsflyerId == id) return Completable.complete()
+    override suspend fun setAppsflyerId(id: String) {
+        if (preferences.appsflyerId == id) return
         preferences.appsflyerId = id
-        return Completable.defer {
+        try {
             deviceRepository.authorize()
-                .ignoreElement()
+        } catch (_: Exception) {
         }
     }
 
-    override fun setFbIds(fbc: String?, fbp: String?): Completable {
-        if (preferences.fbc == fbc && preferences.fbp == fbp) return Completable.complete()
+    override suspend fun setFbIds(fbc: String?, fbp: String?) {
+        if (preferences.fbc == fbc && preferences.fbp == fbp) return
         preferences.fbc = fbc
         preferences.fbp = fbp
-        return Completable.defer {
+        try {
             deviceRepository.ensureAuthorized()
-                .andThen(deviceRepository.authorize())
-                .ignoreElement()
+            deviceRepository.authorize()
+        } catch (_: Exception) {
         }
     }
 
@@ -197,60 +190,65 @@ class PandaImpl(
         preferences.appsflyerId = id
     }
 
-    override fun stopNetwork(): Completable = stopNetworkInternal()
+    override fun stopNetwork() = stopNetworkInternal()
 
-    override fun clearLocalData() = deviceRepository.clearLocalData()
+    override suspend fun clearLocalData() = deviceRepository.clearLocalData()
 
-    override fun syncSubscriptions(): Completable {
-        return deviceRepository.ensureAuthorized()
-            .andThen(subscriptionsRepository.sync())
+    override suspend fun syncSubscriptions() {
+        deviceRepository.ensureAuthorized()
+        subscriptionsRepository.sync()
     }
 
-    override fun validatePurchase(purchase: Purchase): Single<Boolean> {
-        return deviceRepository.ensureAuthorized()
-            .andThen(subscriptionsRepository.validatePurchase(purchase))
+    override suspend fun validatePurchase(purchase: Purchase): Boolean {
+        deviceRepository.ensureAuthorized()
+        return subscriptionsRepository.validatePurchase(purchase)
     }
 
-    override fun restore(): Single<List<String>> =
+    override suspend fun restore(): List<String> {
         deviceRepository.ensureAuthorized()
-            .andThen(subscriptionsRepository.restore())
+        return subscriptionsRepository.restore()
+    }
 
-    override fun getSubscriptionState(): Single<SubscriptionState> =
+    override suspend fun getSubscriptionState(): SubscriptionState {
         deviceRepository.ensureAuthorized()
-            .andThen(subscriptionsRepository.getSubscriptionState())
+        return subscriptionsRepository.getSubscriptionState()
+    }
 
-    override fun prefetchSubscriptionScreen(
+    override suspend fun prefetchSubscriptionScreen(
         id: String,
-    ): Single<SubscriptionScreen> =
+    ): SubscriptionScreen {
         deviceRepository.ensureAuthorized()
-            .andThen(subscriptionsRepository.prefetchSubscriptionScreen(id))
+        return subscriptionsRepository.prefetchSubscriptionScreen(id)
+    }
 
-    override fun getSubscriptionScreen(
+    override suspend fun getSubscriptionScreen(
         id: String,
         timeoutMs: Long,
-    ): Single<SubscriptionScreen> =
-        deviceRepository.ensureAuthorized()
-            .andThen(subscriptionsRepository.getSubscriptionScreen(id))
-            .timeout(timeoutMs, TimeUnit.MILLISECONDS, Schedulers.computation())
-            .doOnError {
-                Timber.e(it, "getSubscriptionScreen")
+    ): SubscriptionScreen {
+        return try {
+            withTimeout(timeoutMs) {
+                deviceRepository.ensureAuthorized()
+                subscriptionsRepository.getSubscriptionScreen(id)
             }
-            .onErrorResumeNext {
-                subscriptionsRepository.getFallbackScreen()
-            }
+        } catch (e: Exception) {
+            Timber.e(e, "getSubscriptionScreen")
+            subscriptionsRepository.getFallbackScreen()
+        }
+    }
 
     override fun getCachedSubscriptionScreen(id: String): SubscriptionScreen? =
         subscriptionsRepository.getCachedScreen(id = id)
 
-    override fun getCachedOrDefaultSubscriptionScreen(
+    override suspend fun getCachedOrDefaultSubscriptionScreen(
         id: String,
-    ): Single<SubscriptionScreen> = subscriptionsRepository.getCachedScreen(id)?.let {
-        Single.just(it)
-    } ?: subscriptionsRepository.getFallbackScreen()
+    ): SubscriptionScreen =
+        subscriptionsRepository.getCachedScreen(id)
+            ?: subscriptionsRepository.getFallbackScreen()
 
-    override fun consumeProducts(): Completable =
+    override suspend fun consumeProducts() {
         deviceRepository.ensureAuthorized()
-            .andThen(subscriptionsRepository.consumeProducts())
+        subscriptionsRepository.consumeProducts()
+    }
 
 }
 

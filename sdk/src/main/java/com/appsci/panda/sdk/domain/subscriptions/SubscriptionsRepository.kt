@@ -1,41 +1,39 @@
 package com.appsci.panda.sdk.domain.subscriptions
 
 import com.android.billingclient.api.ProductDetails
-import io.reactivex.Completable
-import io.reactivex.Single
 
 interface SubscriptionsRepository {
 
     /**
      * returns [SubscriptionStatus] based on purchases from billing and local store
      */
-    fun getSubscriptionState(): Single<SubscriptionState>
+    suspend fun getSubscriptionState(): SubscriptionState
 
     /**
      * Fetches purchases from billing and sends to rest store
      */
-    fun sync(): Completable
+    suspend fun sync()
 
-    fun restore(): Single<List<String>>
+    suspend fun restore(): List<String>
 
-    fun validatePurchase(purchase: Purchase): Single<Boolean>
+    suspend fun validatePurchase(purchase: Purchase): Boolean
 
     /**
      * Consumes all available products and refreshes all purchases
      */
-    fun consumeProducts(): Completable
+    suspend fun consumeProducts()
 
-    fun fetchHistory(): Completable
+    suspend fun fetchHistory()
 
-    fun prefetchSubscriptionScreen(id: String): Single<SubscriptionScreen>
+    suspend fun prefetchSubscriptionScreen(id: String): SubscriptionScreen
 
-    fun getSubscriptionScreen(id: String): Single<SubscriptionScreen>
+    suspend fun getSubscriptionScreen(id: String): SubscriptionScreen
 
     fun getCachedScreen(id: String): SubscriptionScreen?
 
-    fun getCachedOrDefaultScreen(id: String): Single<SubscriptionScreen>
+    suspend fun getCachedOrDefaultScreen(id: String): SubscriptionScreen
 
-    fun getFallbackScreen(): Single<SubscriptionScreen>
+    suspend fun getFallbackScreen(): SubscriptionScreen
 
     suspend fun getProductsDetails(requests: Map<String, List<String>>): List<ProductDetails>
 }

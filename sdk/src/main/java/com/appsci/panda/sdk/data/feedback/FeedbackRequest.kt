@@ -1,12 +1,14 @@
 package com.appsci.panda.sdk.data.feedback
 
-import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class FeedbackRequest(
-    @SerializedName("user_id")
+    @SerialName("user_id")
     val userId: String,
-    @SerializedName("screen_id")
+    @SerialName("screen_id")
     val screenId: String,
-    @SerializedName("answer")
+    @SerialName("answer")
     val answer: String,
 )

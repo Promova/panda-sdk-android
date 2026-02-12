@@ -6,15 +6,10 @@ import com.appsci.panda.sdk.data.subscriptions.PurchasesMapper
 import com.appsci.panda.sdk.data.subscriptions.local.PurchaseEntity
 import com.appsci.panda.sdk.data.subscriptions.local.TYPE_PRODUCT
 import com.appsci.panda.sdk.data.subscriptions.local.TYPE_SUBSCRIPTION
-import com.appsci.panda.sdk.domain.utils.rx.SchedulerProvider
 import io.mockk.*
-import io.reactivex.Scheduler
-import io.reactivex.plugins.RxJavaPlugins
-import io.reactivex.schedulers.Schedulers
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
-import com.appsci.panda.sdk.domain.utils.rx.Schedulers as AppSchedulers
 
 /**
  * Tests for PurchasesGoogleStore - validates Google Play Billing integration.
@@ -34,19 +29,6 @@ class PurchasesGoogleStoreTest {
 
     @BeforeEach
     fun setUp() {
-        // Override schedulers for synchronous testing
-        RxJavaPlugins.setIoSchedulerHandler { Schedulers.trampoline() }
-        RxJavaPlugins.setComputationSchedulerHandler { Schedulers.trampoline() }
-
-        // Initialize the app's custom Schedulers with trampoline for testing
-        AppSchedulers.setInstance(object : SchedulerProvider {
-            override fun io(): Scheduler = Schedulers.trampoline()
-            override fun mainThread(): Scheduler = Schedulers.trampoline()
-            override fun computation(): Scheduler = Schedulers.trampoline()
-            override fun newThread(): Scheduler = Schedulers.trampoline()
-            override fun trampoline(): Scheduler = Schedulers.trampoline()
-        })
-
         billingKtx = mockk(relaxed = true)
         mapper = mockk(relaxed = true)
         store = PurchasesGoogleStoreImpl(billingKtx, mapper)
@@ -54,7 +36,6 @@ class PurchasesGoogleStoreTest {
 
     @AfterEach
     fun tearDown() {
-        RxJavaPlugins.reset()
         clearAllMocks()
     }
 
@@ -64,7 +45,7 @@ class PurchasesGoogleStoreTest {
 
         @Test
         @DisplayName("should fetch and combine subscriptions and in-app purchases")
-        fun fetchAndCombinePurchases() = runBlocking {
+        fun fetchAndCombinePurchases() = runTest {
             // Given
             val subscriptionPurchase = createMockPurchase("sub_monthly", "order_sub", "token_sub")
             val productPurchase = createMockPurchase("coins_100", "order_product", "token_product")
@@ -83,7 +64,7 @@ class PurchasesGoogleStoreTest {
                 listOf(productEntity)
 
             // When
-            val result = store.getPurchases().blockingGet()
+            val result = store.getPurchases()
 
             // Then
             assertThat(result).hasSize(2)
@@ -96,7 +77,7 @@ class PurchasesGoogleStoreTest {
 
         @Test
         @DisplayName("should return empty list when no purchases exist")
-        fun returnEmptyWhenNoPurchases() = runBlocking {
+        fun returnEmptyWhenNoPurchases() = runTest {
             // Given
             coEvery { billingKtx.getPurchases(BillingClient.ProductType.SUBS) } returns emptyList()
             coEvery { billingKtx.getPurchases(BillingClient.ProductType.INAPP) } returns emptyList()
@@ -105,7 +86,7 @@ class PurchasesGoogleStoreTest {
             every { mapper.mapFromBillingPurchases(emptyList(), TYPE_PRODUCT) } returns emptyList()
 
             // When
-            val result = store.getPurchases().blockingGet()
+            val result = store.getPurchases()
 
             // Then
             assertThat(result).isEmpty()
@@ -113,21 +94,21 @@ class PurchasesGoogleStoreTest {
 
         @Test
         @DisplayName("should handle subscription fetch error gracefully")
-        fun handleSubscriptionError() {
+        fun handleSubscriptionError() = runTest {
             // Given
             val error = RuntimeException("Billing service unavailable")
             coEvery { billingKtx.getPurchases(BillingClient.ProductType.SUBS) } throws error
 
             // When/Then
-            store.getPurchases()
-                .test()
-                .await()
-                .assertError(error)
+            val thrown = assertThrows<RuntimeException> {
+                store.getPurchases()
+            }
+            assertThat(thrown).isEqualTo(error)
         }
 
         @Test
         @DisplayName("should handle in-app fetch error after successful subscription fetch")
-        fun handleInAppErrorAfterSubscriptionSuccess() {
+        fun handleInAppErrorAfterSubscriptionSuccess() = runTest {
             // Given
             val subscriptionPurchase = createMockPurchase("sub", "order", "token")
             val subscriptionEntity = createPurchaseEntity("sub", TYPE_SUBSCRIPTION)
@@ -140,10 +121,10 @@ class PurchasesGoogleStoreTest {
                 listOf(subscriptionEntity)
 
             // When/Then
-            store.getPurchases()
-                .test()
-                .await()
-                .assertError(error)
+            val thrown = assertThrows<RuntimeException> {
+                store.getPurchases()
+            }
+            assertThat(thrown).isEqualTo(error)
         }
     }
 
@@ -153,7 +134,7 @@ class PurchasesGoogleStoreTest {
 
         @Test
         @DisplayName("should consume all in-app products")
-        fun consumeAllProducts() = runBlocking {
+        fun consumeAllProducts() = runTest {
             // Given
             val purchase1 = createMockPurchase("coins_100", "order_1", "token_1")
             val purchase2 = createMockPurchase("coins_500", "order_2", "token_2")
@@ -164,9 +145,6 @@ class PurchasesGoogleStoreTest {
 
             // When
             store.consumeProducts()
-                .test()
-                .await()
-                .assertComplete()
 
             // Then - verify both products were consumed
             coVerify(exactly = 2) { billingKtx.consumeProduct(any()) }
@@ -174,15 +152,12 @@ class PurchasesGoogleStoreTest {
 
         @Test
         @DisplayName("should complete successfully when no products to consume")
-        fun completeWhenNoProducts() = runBlocking {
+        fun completeWhenNoProducts() = runTest {
             // Given
             coEvery { billingKtx.getPurchases(BillingClient.ProductType.INAPP) } returns emptyList()
 
-            // When/Then
+            // When
             store.consumeProducts()
-                .test()
-                .await()
-                .assertComplete()
 
             // Verify consumeProduct was never called
             coVerify(exactly = 0) { billingKtx.consumeProduct(any()) }
@@ -190,7 +165,7 @@ class PurchasesGoogleStoreTest {
 
         @Test
         @DisplayName("should propagate error when consumption fails")
-        fun propagateConsumptionError() {
+        fun propagateConsumptionError() = runTest {
             // Given
             val purchase = createMockPurchase("coins", "order", "token")
             val error = RuntimeException("Consumption failed")
@@ -199,10 +174,10 @@ class PurchasesGoogleStoreTest {
             coEvery { billingKtx.consumeProduct(any()) } throws error
 
             // When/Then
-            store.consumeProducts()
-                .test()
-                .await()
-                .assertError(error)
+            val thrown = assertThrows<RuntimeException> {
+                store.consumeProducts()
+            }
+            assertThat(thrown).isEqualTo(error)
         }
     }
 
@@ -212,7 +187,7 @@ class PurchasesGoogleStoreTest {
 
         @Test
         @DisplayName("should acknowledge only unacknowledged purchases")
-        fun acknowledgeUnacknowledgedOnly() = runBlocking {
+        fun acknowledgeUnacknowledgedOnly() = runTest {
             // Given
             val acknowledgedPurchase = createMockPurchase("sub_1", "order_1", "token_1", isAcknowledged = true)
             val unacknowledgedPurchase = createMockPurchase("sub_2", "order_2", "token_2", isAcknowledged = false)
@@ -224,9 +199,6 @@ class PurchasesGoogleStoreTest {
 
             // When
             store.acknowledge()
-                .test()
-                .await()
-                .assertComplete()
 
             // Then - only unacknowledged purchase should be acknowledged
             coVerify(exactly = 1) { billingKtx.acknowledge(any()) }
@@ -234,7 +206,7 @@ class PurchasesGoogleStoreTest {
 
         @Test
         @DisplayName("should acknowledge purchases from both subscriptions and in-app")
-        fun acknowledgeBothTypes() = runBlocking {
+        fun acknowledgeBothTypes() = runTest {
             // Given
             val subPurchase = createMockPurchase("sub", "order_sub", "token_sub", isAcknowledged = false)
             val productPurchase = createMockPurchase("coins", "order_product", "token_product", isAcknowledged = false)
@@ -245,9 +217,6 @@ class PurchasesGoogleStoreTest {
 
             // When
             store.acknowledge()
-                .test()
-                .await()
-                .assertComplete()
 
             // Then - both should be acknowledged
             coVerify(exactly = 2) { billingKtx.acknowledge(any()) }
@@ -255,18 +224,15 @@ class PurchasesGoogleStoreTest {
 
         @Test
         @DisplayName("should complete when all purchases already acknowledged")
-        fun completeWhenAllAcknowledged() = runBlocking {
+        fun completeWhenAllAcknowledged() = runTest {
             // Given
             val purchase = createMockPurchase("sub", "order", "token", isAcknowledged = true)
 
             coEvery { billingKtx.getPurchases(BillingClient.ProductType.SUBS) } returns listOf(purchase)
             coEvery { billingKtx.getPurchases(BillingClient.ProductType.INAPP) } returns emptyList()
 
-            // When/Then
+            // When
             store.acknowledge()
-                .test()
-                .await()
-                .assertComplete()
 
             coVerify(exactly = 0) { billingKtx.acknowledge(any()) }
         }
@@ -278,16 +244,13 @@ class PurchasesGoogleStoreTest {
 
         @Test
         @DisplayName("should fetch purchases for both subscriptions and in-app products")
-        fun fetchBothPurchases() = runBlocking {
+        fun fetchBothPurchases() = runTest {
             // Given
             coEvery { billingKtx.getPurchases(BillingClient.ProductType.SUBS) } returns emptyList()
             coEvery { billingKtx.getPurchases(BillingClient.ProductType.INAPP) } returns emptyList()
 
             // When
             store.fetchHistory()
-                .test()
-                .await()
-                .assertComplete()
 
             // Then
             coVerify { billingKtx.getPurchases(BillingClient.ProductType.SUBS) }
@@ -296,16 +259,16 @@ class PurchasesGoogleStoreTest {
 
         @Test
         @DisplayName("should propagate error from subscription fetch")
-        fun propagateSubscriptionError() {
+        fun propagateSubscriptionError() = runTest {
             // Given
             val error = RuntimeException("Fetch failed")
             coEvery { billingKtx.getPurchases(BillingClient.ProductType.SUBS) } throws error
 
             // When/Then
-            store.fetchHistory()
-                .test()
-                .await()
-                .assertError(error)
+            val thrown = assertThrows<RuntimeException> {
+                store.fetchHistory()
+            }
+            assertThat(thrown).isEqualTo(error)
         }
     }
 
@@ -315,7 +278,7 @@ class PurchasesGoogleStoreTest {
 
         @Test
         @DisplayName("should fetch product details for subscription type")
-        fun fetchSubscriptionDetails() = runBlocking {
+        fun fetchSubscriptionDetails() = runTest {
             // Given
             val productDetails = createMockProductDetails("premium_monthly", BillingClient.ProductType.SUBS)
             val requests = mapOf(BillingClient.ProductType.SUBS to listOf("premium_monthly"))
@@ -332,7 +295,7 @@ class PurchasesGoogleStoreTest {
 
         @Test
         @DisplayName("should return empty list for empty requests")
-        fun returnEmptyForEmptyRequests() = runBlocking {
+        fun returnEmptyForEmptyRequests() = runTest {
             // When
             val result = store.getProductsDetails(emptyMap())
 
