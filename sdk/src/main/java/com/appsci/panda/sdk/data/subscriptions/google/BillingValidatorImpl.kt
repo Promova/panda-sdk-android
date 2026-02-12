@@ -19,9 +19,9 @@ class BillingValidatorImpl : BillingValidator {
             val actionBytes = digest.digest(BIND_ACTION.toByteArray())
             val packageBytes = digest.digest(PACKAGE.toByteArray())
             val currentActionHash = actionBytes.fold("") { str, it -> str + "%02x".format(it) }
-                    .toUpperCase(Locale.US)
+                    .uppercase(Locale.US)
             val currentPackageHash = packageBytes.fold("") { str, it -> str + "%02x".format(it) }
-                    .toUpperCase(Locale.US)
+                    .uppercase(Locale.US)
             return@fromCallable currentActionHash == ACTION_HASH && currentPackageHash == PACKAGE_HASH
         }
                 .onErrorReturnItem(true)

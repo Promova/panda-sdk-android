@@ -95,7 +95,6 @@ dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
 
     implementation presentationDependencies.lifecycleRuntime
-    kapt presentationDependencies.lifecycleCompiler
     implementation presentationDependencies.fragment
     implementation presentationDependencies.fragmentKtx
 
@@ -114,7 +113,6 @@ dependencies {
     implementation dataDependencies.rxJava
     implementation dataDependencies.rxAndroid
     implementation dataDependencies.rxKotlin
-    implementation dataDependencies.rxBinding
 
     implementation dataDependencies.room
     implementation dataDependencies.roomRxJava
@@ -129,9 +127,9 @@ dependencies {
     implementation dataDependencies.retrofitRxJavaAdapter
     implementation dataDependencies.retrofitScalarsConverter
 
-    implementation platform('com.google.firebase:firebase-bom:32.7.0')
-    implementation 'com.google.firebase:firebase-messaging-ktx'
-    implementation 'com.google.firebase:firebase-analytics-ktx'
+    implementation platform('com.google.firebase:firebase-bom:33.16.0')
+    implementation 'com.google.firebase:firebase-messaging'
+    implementation 'com.google.firebase:firebase-analytics'
 
     // Billing
     implementation dataDependencies.billingKtx
@@ -147,6 +145,7 @@ dependencies {
     testImplementation testDependencies.jupiterApi
     testImplementation testDependencies.jupiterEngine
     testImplementation testDependencies.jupiterParams
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.3'
     testImplementation testDependencies.mockK
     testImplementation testDependencies.assertJ
     testImplementation coroutineDependencies.test
