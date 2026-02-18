@@ -71,7 +71,7 @@ ext {
 
     // Billing Client
     billingClientVer = '8.0.0'
-    billingKtxVer = '1.0.0'
+    billingKtxVer = '1.1.0-RC2'
 
     // Developer-related
     timberVer = '5.0.1'
