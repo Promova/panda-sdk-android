@@ -311,7 +311,6 @@ class SubscriptionFragment : Fragment() {
                                 try {
                                     val success = Panda.onPurchase(screenExtra, purchase, getType(productId))
                                     Timber.d("onPurchase success=$success")
-                                    notifyPurchase(screenExtra, productId)
                                 } catch (error: Throwable) {
                                     Panda.onError(error)
                                     Timber.e(error)
@@ -503,10 +502,6 @@ class SubscriptionFragment : Fragment() {
                 Timber.e(e)
             }
         }
-    }
-
-    private fun notifyPurchase(screenExtra: ScreenExtra, productId: String) {
-        // Notify listeners about the successful purchase
     }
 
     private fun openExternalUrl(url: String) {
