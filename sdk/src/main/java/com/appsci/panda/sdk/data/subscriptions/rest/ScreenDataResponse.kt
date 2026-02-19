@@ -1,13 +1,15 @@
 package com.appsci.panda.sdk.data.subscriptions.rest
 
-import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class ScreenDataResponse(
-    @SerializedName("screen_html")
+    @SerialName("screen_html")
     val htmlUrl: String,
-    @SerializedName("name")
+    @SerialName("name")
     val name: String,
-    @SerializedName("id")
+    @SerialName("id")
     val id: String
 )
 

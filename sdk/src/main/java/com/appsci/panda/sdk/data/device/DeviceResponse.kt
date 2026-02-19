@@ -1,8 +1,10 @@
 package com.appsci.panda.sdk.data.device
 
-import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class DeviceResponse(
-        @SerializedName("id")
-        val id: String
+    @SerialName("id")
+    val id: String
 )

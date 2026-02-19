@@ -1,56 +1,58 @@
 package com.appsci.panda.sdk.data.device
 
-import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class DeviceRequest(
-    @SerializedName("country")
+    @SerialName("country")
     val country: String,
-    @SerializedName("device_model")
+    @SerialName("device_model")
     val deviceModel: String,
-    @SerializedName("app_version")
+    @SerialName("app_version")
     val appVersion: String,
-    @SerializedName("start_app_version")
+    @SerialName("start_app_version")
     val startAppVersion: String,
-    @SerializedName("timezone")
+    @SerialName("timezone")
     val timeZone: String,
-    @SerializedName("os_version")
+    @SerialName("os_version")
     val osVersion: String,
-    @SerializedName("idfa")
+    @SerialName("idfa")
     val idfa: String? = null,
-    @SerializedName("device_family")
+    @SerialName("device_family")
     val deviceFamily: String,
-    @SerializedName("language")
+    @SerialName("language")
     val language: String,
-    @SerializedName("locale")
+    @SerialName("locale")
     val locale: String,
-    @SerializedName("platform")
+    @SerialName("platform")
     val platform: String,
-    @SerializedName("push_notifications_token")
+    @SerialName("push_notifications_token")
     val pushToken: String? = null,
-    @SerializedName("custom_user_id")
+    @SerialName("custom_user_id")
     val customUserId: String? = null,
-    @SerializedName("appsflyer_id")
+    @SerialName("appsflyer_id")
     val appsflyerId: String? = null,
-    @SerializedName("time_zone")
+    @SerialName("time_zone")
     val idfv: String? = null,
-    @SerializedName("fbc")
+    @SerialName("fbc")
     val fbc: String? = null,
-    @SerializedName("fbp")
+    @SerialName("fbp")
     val fbp: String? = null,
-    @SerializedName("email")
+    @SerialName("email")
     val email: String? = null,
-    @SerializedName("facebook_login_id")
+    @SerialName("facebook_login_id")
     val facebookLoginId: String? = null,
-    @SerializedName("first_name")
+    @SerialName("first_name")
     val firstName: String? = null,
-    @SerializedName("last_name")
+    @SerialName("last_name")
     val lastName: String? = null,
-    @SerializedName("full_name")
+    @SerialName("full_name")
     val fullName: String? = null,
-    @SerializedName("gender")
+    @SerialName("gender")
     val gender: Int? = null,
-    @SerializedName("phone")
+    @SerialName("phone")
     val phone: String? = null,
-    @SerializedName("properties")
+    @SerialName("properties")
     val properties: Map<String, String>?,
 )

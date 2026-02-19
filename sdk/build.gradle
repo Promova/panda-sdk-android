@@ -2,6 +2,8 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-parcelize'
 apply plugin: 'kotlin-kapt'
+apply plugin: 'kotlinx-serialization'
+apply plugin: 'com.google.devtools.ksp'
 apply plugin: 'maven-publish'
 
 android {
@@ -19,13 +21,6 @@ android {
 
         buildConfigField "String", "PANDA_ENDPOINT_PROD", "\"https://api.panda.boosters.company/\""
         buildConfigField "String", "PANDA_ENDPOINT_STAGE", "\"https://api.panda-stage.boosters.company/\""
-
-        javaCompileOptions {
-            annotationProcessorOptions {
-                arguments = ["room.schemaLocation": "$projectDir/schemas".toString()]
-//                includeCompileClasspath = true
-            }
-        }
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -52,6 +47,9 @@ android {
             useJUnitPlatform()
         }
     }
+    ksp {
+        arg("room.schemaLocation", "$projectDir/schemas")
+    }
     buildFeatures {
         viewBinding true
         buildConfig true
@@ -72,7 +70,7 @@ afterEvaluate {
                 from components.release
                 groupId = 'com.github.AppSci'
                 artifactId = 'panda-sdk-android'
-                version = '1.8.0'
+                version = '1.9.0-RC2'
             }
         }
 
@@ -95,7 +93,6 @@ dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
 
     implementation presentationDependencies.lifecycleRuntime
-    kapt presentationDependencies.lifecycleCompiler
     implementation presentationDependencies.fragment
     implementation presentationDependencies.fragmentKtx
 
@@ -108,30 +105,22 @@ dependencies {
     // Kotlin dependencies
     implementation kotlinDependencies.kotlinStdLib
     implementation kotlinDependencies.androidKtx
-    implementation kotlinDependencies.kotlinReflect
-
-    // Rx + Coroutines
-    implementation dataDependencies.rxJava
-    implementation dataDependencies.rxAndroid
-    implementation dataDependencies.rxKotlin
-    implementation dataDependencies.rxBinding
 
     implementation dataDependencies.room
-    implementation dataDependencies.roomRxJava
-    kapt dataDependencies.roomCompiler
+    implementation dataDependencies.roomKtx
+    ksp dataDependencies.roomCompiler
 
     implementation dataDependencies.threeten
-    implementation dataDependencies.gson
     implementation dataDependencies.okHttp
     implementation dataDependencies.okHttpInterceptor
     implementation dataDependencies.retrofit
-    implementation dataDependencies.retrofitGsonConverter
-    implementation dataDependencies.retrofitRxJavaAdapter
     implementation dataDependencies.retrofitScalarsConverter
+    implementation dataDependencies.retrofitKotlinxConverter
+    implementation dataDependencies.kotlinxSerializationJson
 
-    implementation platform('com.google.firebase:firebase-bom:32.7.0')
-    implementation 'com.google.firebase:firebase-messaging-ktx'
-    implementation 'com.google.firebase:firebase-analytics-ktx'
+    implementation platform('com.google.firebase:firebase-bom:33.16.0')
+    implementation 'com.google.firebase:firebase-messaging'
+    implementation 'com.google.firebase:firebase-analytics'
 
     // Billing
     implementation dataDependencies.billingKtx
@@ -141,12 +130,12 @@ dependencies {
 
     implementation coroutineDependencies.core
     implementation coroutineDependencies.android
-    implementation coroutineDependencies.rx2
 
 
     testImplementation testDependencies.jupiterApi
     testImplementation testDependencies.jupiterEngine
     testImplementation testDependencies.jupiterParams
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.3'
     testImplementation testDependencies.mockK
     testImplementation testDependencies.assertJ
     testImplementation coroutineDependencies.test

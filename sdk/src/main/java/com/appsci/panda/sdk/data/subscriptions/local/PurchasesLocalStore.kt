@@ -1,12 +1,10 @@
 package com.appsci.panda.sdk.data.subscriptions.local
 
-import io.reactivex.Single
-
 interface PurchasesLocalStore {
 
-    fun getPurchases(): Single<List<PurchaseEntity>>
+    suspend fun getPurchases(): List<PurchaseEntity>
 
-    fun getNotSentPurchases(): Single<List<PurchaseEntity>>
+    suspend fun getNotSentPurchases(): List<PurchaseEntity>
 
     fun markSynced(id: String)
 
@@ -15,10 +13,10 @@ interface PurchasesLocalStore {
 
 class PurchasesLocalStoreImpl(private val purchaseDao: PurchaseDao) : PurchasesLocalStore {
 
-    override fun getPurchases(): Single<List<PurchaseEntity>> =
+    override suspend fun getPurchases(): List<PurchaseEntity> =
             purchaseDao.selectPurchases()
 
-    override fun getNotSentPurchases(): Single<List<PurchaseEntity>> =
+    override suspend fun getNotSentPurchases(): List<PurchaseEntity> =
             purchaseDao.selectNotSentPurchases()
 
     override fun markSynced(id: String) {

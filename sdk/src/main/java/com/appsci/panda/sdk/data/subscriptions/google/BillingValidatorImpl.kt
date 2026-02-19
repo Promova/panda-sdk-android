@@ -1,7 +1,5 @@
 package com.appsci.panda.sdk.data.subscriptions.google
 
-import io.reactivex.Completable
-import io.reactivex.Single
 import java.security.MessageDigest
 import java.util.*
 
@@ -13,25 +11,23 @@ class BillingValidatorImpl : BillingValidator {
         const val PACKAGE = "com.android.vending"
     }
 
-    override fun validateIntent(): Completable {
-        return Single.fromCallable {
+    override suspend fun validateIntent() {
+        try {
             val digest = MessageDigest.getInstance("SHA-256")
             val actionBytes = digest.digest(BIND_ACTION.toByteArray())
             val packageBytes = digest.digest(PACKAGE.toByteArray())
             val currentActionHash = actionBytes.fold("") { str, it -> str + "%02x".format(it) }
-                    .toUpperCase(Locale.US)
+                    .uppercase(Locale.US)
             val currentPackageHash = packageBytes.fold("") { str, it -> str + "%02x".format(it) }
-                    .toUpperCase(Locale.US)
-            return@fromCallable currentActionHash == ACTION_HASH && currentPackageHash == PACKAGE_HASH
+                    .uppercase(Locale.US)
+            val isValid = currentActionHash == ACTION_HASH && currentPackageHash == PACKAGE_HASH
+            if (!isValid) {
+                throw InvalidIntentException(action = BIND_ACTION, packageName = PACKAGE)
+            }
+        } catch (e: InvalidIntentException) {
+            throw e
+        } catch (_: Exception) {
+            // Ignore errors, treat as valid (matching original onErrorReturnItem(true) behavior)
         }
-                .onErrorReturnItem(true)
-                .flatMapCompletable {
-                    return@flatMapCompletable when (it) {
-                        true -> Completable.complete()
-                        false -> Completable.error(
-                                InvalidIntentException(action = BIND_ACTION, packageName = PACKAGE))
-                    }
-                }
-
     }
 }

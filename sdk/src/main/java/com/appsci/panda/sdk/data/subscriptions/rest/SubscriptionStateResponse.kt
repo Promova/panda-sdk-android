@@ -1,37 +1,40 @@
 package com.appsci.panda.sdk.data.subscriptions.rest
 
-import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class SubscriptionStateResponse(
-        @SerializedName("state")
-        val state: String,
-        @SerializedName("subscriptions")
-        val subscriptions: SubscriptionsResponse
+    @SerialName("state")
+    val state: String,
+    @SerialName("subscriptions")
+    val subscriptions: SubscriptionsResponse
 )
 
+@Serializable
 data class SubscriptionsResponse(
-        @SerializedName("android")
-        val android: List<SubscriptionResponse>?,
-        @SerializedName("ios")
-        val ios: List<SubscriptionResponse>?,
-        @SerializedName("web")
-        val web: List<SubscriptionResponse>?
+    @SerialName("android")
+    val android: List<SubscriptionResponse>? = null,
+    @SerialName("ios")
+    val ios: List<SubscriptionResponse>? = null,
+    @SerialName("web")
+    val web: List<SubscriptionResponse>? = null
 )
 
+@Serializable
 data class SubscriptionResponse(
-        @SerializedName("order_id")
-        val orderId: String,
-        @SerializedName("subscription_id")
-        val subscriptionId: String,
-        @SerializedName("is_trial_period")
-        val isTrial: Boolean,
-        @SerializedName("product_id")
-        val productId: String,
-        @SerializedName("state")
-        val state: String,
-        @SerializedName("is_intro_offer")
-        val isIntroOffer: Boolean?,
-        @SerializedName("payment_type")
-        //can it be null? I don't know
-        val paymentType: String?,
+    @SerialName("order_id")
+    val orderId: String,
+    @SerialName("subscription_id")
+    val subscriptionId: String,
+    @SerialName("is_trial_period")
+    val isTrial: Boolean,
+    @SerialName("product_id")
+    val productId: String,
+    @SerialName("state")
+    val state: String,
+    @SerialName("is_intro_offer")
+    val isIntroOffer: Boolean? = null,
+    @SerialName("payment_type")
+    val paymentType: String? = null,
 )

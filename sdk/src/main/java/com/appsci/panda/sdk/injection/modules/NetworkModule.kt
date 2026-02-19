@@ -7,15 +7,15 @@ import com.appsci.panda.sdk.data.network.HeaderInterceptor
 import com.appsci.panda.sdk.data.network.PandaApi
 import com.appsci.panda.sdk.data.network.ScreenApi
 import com.appsci.panda.sdk.domain.utils.DeviceManager
-import com.google.gson.GsonBuilder
 import dagger.Module
 import dagger.Provides
+import kotlinx.serialization.json.Json
 import okhttp3.Cache
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
-import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory
-import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import retrofit2.converter.scalars.ScalarsConverterFactory
 import java.io.File
 import java.util.concurrent.TimeUnit
@@ -35,6 +35,13 @@ class NetworkModule(
         private const val CLIENT_CONNECT_TIMEOUT_SECONDS = 30L
         private const val CLIENT_READ_TIMEOUT_SECONDS = 30L
         private const val CLIENT_WRITE_TIMEOUT_SECONDS = 10L
+    }
+
+    private val json = Json {
+        isLenient = true
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+        explicitNulls = false
     }
 
     @Provides
@@ -79,17 +86,13 @@ class NetworkModule(
     @Provides
     @Singleton
     fun providePandaApi(okHttpClient: OkHttpClient): PandaApi {
-        val gson = GsonBuilder()
-                .setLenient()
-                .create()
         return Retrofit.Builder()
                 .baseUrl(if (debug) {
                     BuildConfig.PANDA_ENDPOINT_STAGE
                 } else {
                     BuildConfig.PANDA_ENDPOINT_PROD
                 })
-                .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
-                .addConverterFactory(GsonConverterFactory.create(gson))
+                .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
                 .client(okHttpClient)
                 .build()
                 .create(PandaApi::class.java)
@@ -98,13 +101,10 @@ class NetworkModule(
     @Provides
     @Singleton
     fun provideScreenApi(okHttpClient: OkHttpClient): ScreenApi {
-        val gson = GsonBuilder()
-            .setLenient()
-            .create()
         return Retrofit.Builder()
             .baseUrl("https://isengard.promova-tech.com/")
             .addConverterFactory(ScalarsConverterFactory.create())
-            .addConverterFactory(GsonConverterFactory.create(gson))
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .client(okHttpClient)
             .build()
             .create(ScreenApi::class.java)

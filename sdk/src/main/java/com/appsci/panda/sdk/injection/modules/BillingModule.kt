@@ -18,8 +18,6 @@ import com.appsci.panda.sdk.data.subscriptions.rest.PurchasesRestStore
 import com.appsci.panda.sdk.data.subscriptions.rest.PurchasesRestStoreImpl
 import com.appsci.panda.sdk.domain.subscriptions.SubscriptionsRepository
 import com.appsci.billingktx.client.BillingKtx
-import com.appsci.billingktx.client.BillingKtxImpl
-import com.appsci.billingktx.connection.BillingKtxFactory
 import dagger.Module
 import dagger.Provides
 import javax.inject.Singleton
@@ -29,12 +27,10 @@ class BillingModule(private val context: Context) {
 
     @Provides
     @Singleton
-    fun provideBillingKtx(): BillingKtx = BillingKtxImpl(
-        BillingKtxFactory(
-            context = context,
-            enableOneTimeProducts = true,
-            enablePrepaidPlans = true,
-        )
+    fun provideBillingKtx(): BillingKtx = BillingKtx(
+        context = context,
+        enableOneTimeProducts = true,
+        enablePrepaidPlans = true,
     )
 
     @Provides

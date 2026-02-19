@@ -60,15 +60,9 @@ dependencies {
     // Kotlin dependencies
     implementation kotlinDependencies.kotlinStdLib
     implementation kotlinDependencies.androidKtx
-    implementation kotlinDependencies.kotlinReflect
-
-    // Rx + Coroutines
-    implementation dataDependencies.rxJava
-    implementation dataDependencies.rxAndroid
-    implementation dataDependencies.rxKotlin
 
     implementation dataDependencies.room
-    implementation dataDependencies.roomRxJava
+    implementation dataDependencies.roomKtx
     kapt dataDependencies.roomCompiler
 
     implementation supportDependencies.appCompat
@@ -77,12 +71,12 @@ dependencies {
     implementation supportDependencies.constraintLayout
 
     implementation dataDependencies.threeten
-    implementation dataDependencies.gson
     implementation dataDependencies.okHttp
     implementation dataDependencies.okHttpInterceptor
     implementation dataDependencies.retrofit
-    implementation dataDependencies.retrofitGsonConverter
-    implementation dataDependencies.retrofitRxJavaAdapter
+    implementation dataDependencies.retrofitScalarsConverter
+    implementation dataDependencies.retrofitKotlinxConverter
+    implementation dataDependencies.kotlinxSerializationJson
 
     implementation developmentDependencies.timber
     debugImplementation developmentDependencies.leakCanary

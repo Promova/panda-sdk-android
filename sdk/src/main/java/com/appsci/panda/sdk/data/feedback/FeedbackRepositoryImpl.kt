@@ -4,7 +4,6 @@ import com.appsci.panda.sdk.data.device.DeviceDao
 import com.appsci.panda.sdk.data.network.PandaApi
 import com.appsci.panda.sdk.domain.feedback.FeedbackRepository
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.rx2.await
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
@@ -17,7 +16,7 @@ class FeedbackRepositoryImpl @Inject constructor(
         screenId: String,
         answer: String,
     ) = withContext(Dispatchers.IO) {
-        val userId = deviceDao.requireUserId().await()
+        val userId = deviceDao.requireUserId() ?: error("User not authorized")
         pandaApi.sendFeedback(
             FeedbackRequest(
                 userId = userId,

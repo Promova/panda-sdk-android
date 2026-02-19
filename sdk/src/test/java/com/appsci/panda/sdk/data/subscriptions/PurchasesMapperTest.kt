@@ -174,9 +174,9 @@ class PurchasesMapperTest {
         }
 
         @Test
-        @DisplayName("should handle null orderId (Billing v8)")
+        @DisplayName("should skip purchase with null orderId (Billing v8)")
         fun mapPurchaseWithNullOrderId() {
-            // Given - orderId can be null in Billing v8
+            // Given - orderId can be null in Billing v8, such purchases should be skipped
             val billingPurchase = createMockBillingPurchase(
                 productIds = listOf("product"),
                 orderId = null,
@@ -190,14 +190,13 @@ class PurchasesMapperTest {
             )
 
             // Then
-            assertThat(result).hasSize(1)
-            assertThat(result.first().orderId).isEmpty()
+            assertThat(result).isEmpty()
         }
 
         @Test
-        @DisplayName("should handle empty products list")
+        @DisplayName("should skip purchase with empty products list")
         fun mapPurchaseWithEmptyProductsList() {
-            // Given - edge case for empty products list
+            // Given - purchases with no products should be skipped
             val billingPurchase = createMockBillingPurchase(
                 productIds = emptyList(),
                 orderId = "order",
@@ -211,8 +210,7 @@ class PurchasesMapperTest {
             )
 
             // Then
-            assertThat(result).hasSize(1)
-            assertThat(result.first().productId).isEmpty()
+            assertThat(result).isEmpty()
         }
     }
 
